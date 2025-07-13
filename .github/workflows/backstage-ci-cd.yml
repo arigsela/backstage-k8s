@@ -162,55 +162,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # DEBUG: Test scan-image logic in PRs
-  debug-scan-image:
-    name: Debug Scan Image Logic
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Simulate ECR login output
-        id: simulate-ecr
-        run: |
-          # Simulate what ECR login would output
-          MOCK_REGISTRY="123456789012.dkr.ecr.us-east-1.amazonaws.com"
-          echo "registry=$MOCK_REGISTRY" >> $GITHUB_OUTPUT
-          echo "Simulated registry: $MOCK_REGISTRY"
-          
-      - name: Test image URI construction
-        id: test-uri
-        run: |
-          # Test the exact same logic as build-push job
-          REGISTRY="${{ steps.simulate-ecr.outputs.registry }}"
-          REPOSITORY="backstage"
-          IMAGE_URI="$REGISTRY/$REPOSITORY:latest"
-          
-          echo "=== Testing URI Construction ==="
-          echo "Registry: '$REGISTRY'"
-          echo "Repository: '$REPOSITORY'"
-          echo "Constructed URI: '$IMAGE_URI'"
-          echo "URI length: ${#IMAGE_URI}"
-          
-          # Output for use in next step
-          echo "test-image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-          
-          # Validate format
-          if [[ "$IMAGE_URI" =~ ^[a-zA-Z0-9.-]+\.amazonaws\.com/[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+$ ]]; then
-            echo "✅ Image URI format is valid"
-          else
-            echo "❌ Image URI format is invalid!"
-            exit 1
-          fi
-          
-      - name: Test Trivy with mock image
-        run: |
-          echo "Would run Trivy with: ${{ steps.test-uri.outputs.test-image-uri }}"
-          # Note: We can't actually run Trivy without a real image
-          
   # PR Gate - All checks must pass
   pr-gate:
     name: PR Gate
     if: github.event_name == 'pull_request'
-    needs: [code-quality, test, security, docker-pr, debug-scan-image]
+    needs: [code-quality, test, security, docker-pr]
     runs-on: ubuntu-latest
     steps:
       - name: PR Gate Status
@@ -222,7 +178,6 @@ jobs:
           echo "- Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Docker Build: ${{ needs.docker-pr.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Debug Scan: ${{ needs.debug-scan-image.result }}" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
   # MAIN WORKFLOW - Runs on push to main
@@ -234,8 +189,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
-      image-uri: ${{ steps.debug-output.outputs.final-image-uri }}
-      image-digest: ${{ steps.build.outputs.digest }}
+      image-uri: ${{ steps.set-outputs.outputs.image-uri }}
+      image-digest: ${{ steps.set-outputs.outputs.image-digest }}
     steps:
       - uses: actions/checkout@v4
       
@@ -250,14 +205,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       
-      - name: Debug - Check ECR login output
-        run: |
-          echo "=== Debug ECR Login Output ==="
-          echo "Registry: '${{ steps.login-ecr.outputs.registry }}'"
-          echo "Registry length: ${#REGISTRY}"
-          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          echo "Stored REGISTRY: '$REGISTRY'"
-          
       - uses: docker/setup-buildx-action@v3
       
       - name: Generate metadata
@@ -305,53 +252,40 @@ jobs:
           name: deployment-manifest
           path: deployment-manifest.json
           
-      - name: Debug - Set final outputs
-        id: debug-output
+      - name: Set final outputs
+        id: set-outputs
         run: |
           echo "=== Setting Final Outputs ==="
-          FINAL_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest"
-          echo "Registry from ECR login: '${{ steps.login-ecr.outputs.registry }}'"
-          echo "Repository: '${{ env.ECR_REPOSITORY }}'"
+          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          REPOSITORY="${{ env.ECR_REPOSITORY }}"
+          FINAL_URI="${REGISTRY}/${REPOSITORY}:latest"
+          
+          echo "Registry: '$REGISTRY'"
+          echo "Repository: '$REPOSITORY'"
           echo "Final URI: '$FINAL_URI'"
-          echo "Final URI length: ${#FINAL_URI}"
           
-          # Set output
-          echo "final-image-uri=$FINAL_URI" >> $GITHUB_OUTPUT
+          # Set outputs using the new syntax
+          echo "image-uri=${FINAL_URI}" >> $GITHUB_OUTPUT
+          echo "image-digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
           
-          # Also log to summary
-          echo "### Build Push Debug Output" >> $GITHUB_STEP_SUMMARY
-          echo "- Registry: \`${{ steps.login-ecr.outputs.registry }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Repository: \`${{ env.ECR_REPOSITORY }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Final Image URI: \`$FINAL_URI\`" >> $GITHUB_STEP_SUMMARY
+          # Verify outputs were set
+          echo "Verifying GITHUB_OUTPUT file:"
+          cat $GITHUB_OUTPUT || echo "Could not read GITHUB_OUTPUT"
+          
+          # Log to summary
+          echo "### Build Output Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry: \`${REGISTRY}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${REPOSITORY}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Image URI: \`${FINAL_URI}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
 
-  # Security scan on pushed image (DEBUG VERSION)
+  # Security scan on pushed image
   scan-image:
     name: Scan ECR Image
     needs: build-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Debug - Check build-push outputs
-        run: |
-          echo "## Debug Information" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Push Outputs:" >> $GITHUB_STEP_SUMMARY
-          echo "- image-uri: '${{ needs.build-push.outputs.image-uri }}'" >> $GITHUB_STEP_SUMMARY
-          echo "- image-digest: '${{ needs.build-push.outputs.image-digest }}'" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "=== Debugging build-push outputs ==="
-          echo "image-uri value: '${{ needs.build-push.outputs.image-uri }}'"
-          echo "image-digest value: '${{ needs.build-push.outputs.image-digest }}'"
-          echo "Length of image-uri: ${#IMAGE_URI}"
-          IMAGE_URI="${{ needs.build-push.outputs.image-uri }}"
-          echo "Stored IMAGE_URI: '$IMAGE_URI'"
-          
-          if [ -z "${{ needs.build-push.outputs.image-uri }}" ]; then
-            echo "ERROR: image-uri is empty!"
-            exit 1
-          fi
-          
       - name: Run Trivy on ECR image
         uses: aquasecurity/trivy-action@master
         with:
