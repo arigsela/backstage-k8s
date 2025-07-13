@@ -4,12 +4,20 @@
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Architecture](#architecture)
-4. [Phase 1: Initial Setup](#phase-1-initial-setup)
-5. [Phase 2: Database Configuration](#phase-2-database-configuration)
-6. [Phase 3: Docker Compose Deployment](#phase-3-docker-compose-deployment)
-8. [Configuration Files](#configuration-files)
-9. [Deployment Steps](#deployment-steps)
-10. [Maintenance and Operations](#maintenance-and-operations)
+4. [Implementation Progress](#implementation-progress)
+5. [Completed Phases](#completed-phases)
+   - [Phase 1: Initial Setup](#phase-1-initial-setup) ✅
+   - [Phase 2: Database Configuration](#phase-2-database-configuration) ✅
+   - [Phase 3: Docker Compose Deployment](#phase-3-docker-compose-deployment) ✅
+6. [Remaining Phases](#remaining-phases)
+   - [Phase 4: Authentication Setup](#phase-4-authentication-setup)
+   - [Phase 5: Catalog Configuration](#phase-5-catalog-configuration)
+   - [Phase 6: TechDocs Setup](#phase-6-techdocs-setup)
+   - [Phase 7: Plugin Installation](#phase-7-plugin-installation)
+   - [Phase 8: Production Configuration](#phase-8-production-configuration)
+7. [Configuration Files](#configuration-files)
+8. [Deployment Steps](#deployment-steps)
+9. [Maintenance and Operations](#maintenance-and-operations)
 
 ## Overview
 
@@ -75,18 +83,58 @@ This document provides a comprehensive guide for implementing Backstage using Do
 3. **nginx** (optional): Reverse proxy for SSL termination
 4. **oauth2-proxy** (optional): Authentication proxy
 
-## Phase 1: Initial Setup
+## Implementation Progress
+
+### Current Status
+- **Project Name**: asela-apps (created via `npx @backstage/create-app`)
+- **Environment**: Development and Docker Compose deployment ready
+- **Database**: PostgreSQL configured and running
+- **Access URL**: http://localhost:7007
+- **Branch**: adding-gh-authentication
+
+### Completed Items
+- ✅ Backstage application scaffolded and configured
+- ✅ PostgreSQL database integration (replaced SQLite)
+- ✅ Docker multi-stage build configured
+- ✅ Docker Compose deployment working
+- ✅ Environment variables configured with secure defaults
+- ✅ Health checks implemented
+- ✅ Application accessible via Docker containers
+
+### Pending Items
+- ⏳ GitHub OAuth authentication
+- ⏳ Catalog locations configuration
+- ⏳ TechDocs setup
+- ⏳ Additional plugins
+- ⏳ Production SSL/TLS setup
+- ⏳ Monitoring and observability
+- ⏳ Backup automation
+
+## Completed Phases
+
+## Phase 1: Initial Setup ✅
 
 ### Step 1: Create Project Directory
 ```bash
-mkdir backstage-deployment
-cd backstage-deployment
+mkdir backstage-k8s
+cd backstage-k8s
 ```
 
 ### Step 2: Create Backstage App
+**Actual command used:**
 ```bash
-npx @backstage/create-app@latest --name backstage
-cd backstage
+npx @backstage/create-app@latest
+# App name provided: asela-apps
+cd asela-apps
+```
+
+### Step 3: Verify Installation
+```bash
+# Start development server
+yarn start
+
+# Verify app is running at http://localhost:3000 (frontend)
+# Backend runs at http://localhost:7007
 ```
 
 ### Step 3: Initial Configuration
@@ -155,10 +203,59 @@ catalog:
         - allow: [User, Group]
 ```
 
-## Phase 2: Database Configuration
+## Phase 2: Database Configuration ✅
 
-### Step 1: Create Production Configuration
-Create `app-config.production.yaml`:
+### Step 1: Install PostgreSQL Dependencies
+```bash
+cd asela-apps
+yarn --cwd packages/backend add pg
+```
+
+### Step 2: Create Docker Compose for Local Development
+Created `docker-compose.dev.yml`:
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: backstage-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: backstage
+      POSTGRES_PASSWORD: backstage
+      POSTGRES_DB: backstage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backstage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+    driver: local
+```
+
+### Step 3: Update Local Configuration
+Updated `app-config.local.yaml`:
+```yaml
+backend:
+  database:
+    client: pg
+    connection:
+      host: localhost
+      port: 5432
+      user: backstage
+      password: backstage
+      database: backstage
+```
+
+### Step 4: Create Production Configuration
+Created `app-config.production.yaml`:
 
 ```yaml
 app:
@@ -187,10 +284,20 @@ backend:
 yarn --cwd packages/backend add pg
 ```
 
-## Phase 3: Docker Compose Deployment
+### Step 5: Test Database Connection
+```bash
+# Start PostgreSQL
+docker-compose -f docker-compose.dev.yml up -d
+
+# Verify Backstage connects to PostgreSQL
+yarn start
+# Check logs for PostgreSQL connection confirmation
+```
+
+## Phase 3: Docker Compose Deployment ✅
 
 ### Step 1: Create Multi-Stage Dockerfile
-Create `Dockerfile` in the project root:
+Created `asela-apps/Dockerfile`:
 
 ```dockerfile
 # Stage 1: Build
@@ -224,7 +331,7 @@ COPY . .
 RUN yarn tsc
 
 # Build backend
-RUN yarn build:backend --config app-config.yaml --config app-config.production.yaml
+RUN yarn build:backend
 
 # Stage 2: Runtime
 FROM node:20-bookworm-slim
@@ -237,10 +344,10 @@ RUN apt-get update && \
     yarn config set python /usr/bin/python3
 
 # Install mkdocs-techdocs-core for TechDocs
-RUN pip3 install mkdocs-techdocs-core==1.1.7
+RUN pip3 install --break-system-packages mkdocs-techdocs-core==1.1.7
 
 # Create non-root user
-RUN groupadd -r backstage && useradd -r -g backstage backstage
+RUN groupadd -r backstage && useradd -r -g backstage -m backstage
 
 # Set working directory
 WORKDIR /app
@@ -255,7 +362,8 @@ USER backstage
 ENV NODE_ENV=production
 
 # Copy built application from build stage
-COPY --from=build --chown=backstage:backstage /app/yarn.lock /app/package.json /app/.yarn /app/.yarnrc.yml ./
+COPY --from=build --chown=backstage:backstage /app/yarn.lock /app/package.json /app/.yarnrc.yml ./
+COPY --from=build --chown=backstage:backstage /app/.yarn/releases /app/.yarn/releases
 COPY --from=build --chown=backstage:backstage /app/packages/backend/dist/skeleton.tar.gz ./
 
 # Extract skeleton
@@ -283,7 +391,7 @@ CMD ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app
 ```
 
 ### Step 2: Create Docker Compose Configuration
-Create `docker-compose.yml`:
+Created `docker-compose.yml` in root directory:
 
 ```yaml
 version: '3.8'
@@ -311,7 +419,7 @@ services:
 
   backstage:
     build:
-      context: .
+      context: ./asela-apps
       dockerfile: Dockerfile
     container_name: backstage-app
     restart: unless-stopped
@@ -397,14 +505,41 @@ BACKEND_BASE_URL=http://localhost:7007
 # Backend Configuration
 BACKEND_SECRET=your-backend-secret-key
 
-# GitHub Integration
-GITHUB_TOKEN=your-github-personal-access-token
+# GitHub Integration (optional - currently disabled)
+# GITHUB_TOKEN=your-github-personal-access-token
 
 # Node.js Configuration
 NODE_ENV=production
 ```
 
-### Step 4: Create Nginx Configuration (Optional)
+### Step 4: Deploy with Docker Compose
+```bash
+# Copy .env.example to .env
+cp .env.example .env
+
+# Generate secure backend secret
+openssl rand -hex 32
+# Update BACKEND_SECRET in .env with generated value
+
+# Generate secure PostgreSQL password
+openssl rand -base64 20 | tr -d "=+/" | cut -c1-16
+# Update POSTGRES_PASSWORD in .env with generated value
+
+# Build and start services
+docker-compose build
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f backstage
+
+# Access application
+# Open http://localhost:7007 in browser
+```
+
+### Step 5: Create Nginx Configuration (Optional)
 Create `nginx.conf`:
 
 ```nginx
@@ -452,19 +587,26 @@ http {
 
 ### Directory Structure
 ```
-backstage-deployment/
-├── backstage/
+backstage-k8s/
+├── asela-apps/
 │   ├── app-config.yaml
+│   ├── app-config.local.yaml (gitignored)
 │   ├── app-config.production.yaml
 │   ├── Dockerfile
+│   ├── docker-compose.dev.yml
 │   ├── packages/
 │   │   ├── app/
 │   │   └── backend/
 │   └── ...
 ├── docker-compose.yml
-├── .env
+├── .env (gitignored)
 ├── .env.example
+├── backstage-implementation-plan.md
+├── README.md
 ├── nginx.conf (optional)
+├── scripts/
+│   ├── backup.sh
+│   └── restore.sh
 └── ssl/ (optional)
     ├── cert.pem
     └── key.pem
@@ -520,6 +662,71 @@ proxy:
     headers:
       Authorization: 'Bearer ${SONARQUBE_TOKEN}'
 ```
+
+## Remaining Phases
+
+## Phase 4: Authentication Setup
+
+### GitHub OAuth Configuration
+1. Create GitHub OAuth App at https://github.com/settings/applications/new
+   - Homepage URL: `http://localhost:3000`
+   - Authorization callback URL: `http://localhost:7007/api/auth/github/handler/frame`
+
+2. Update `.env` file:
+   ```bash
+   AUTH_GITHUB_CLIENT_ID=your-github-client-id
+   AUTH_GITHUB_CLIENT_SECRET=your-github-client-secret
+   ```
+
+3. Update `app-config.yaml`:
+   ```yaml
+   integrations:
+     github:
+       - host: github.com
+         token: ${GITHUB_TOKEN}
+   
+   auth:
+     providers:
+       github:
+         development:
+           clientId: ${AUTH_GITHUB_CLIENT_ID}
+           clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+   ```
+
+## Phase 5: Catalog Configuration
+
+### Add Catalog Sources
+1. Create catalog entities for your services
+2. Configure catalog locations in `app-config.yaml`
+3. Set up catalog refresh schedules
+4. Configure entity processors
+
+## Phase 6: TechDocs Setup
+
+### Enable Documentation
+1. Configure TechDocs builder and publisher
+2. Set up documentation storage (local or cloud)
+3. Create documentation for your components
+4. Configure MkDocs plugins
+
+## Phase 7: Plugin Installation
+
+### Common Plugins to Consider
+- Kubernetes plugin for cluster visibility
+- Jenkins/CircleCI/GitHub Actions for CI/CD
+- SonarQube for code quality
+- PagerDuty for incident management
+- Cost insights for cloud spending
+
+## Phase 8: Production Configuration
+
+### Production Readiness
+1. SSL/TLS certificate setup
+2. Domain configuration
+3. Authentication provider setup
+4. Monitoring and alerting
+5. Backup automation
+6. Security hardening
 
 ## Deployment Steps
 
@@ -748,13 +955,28 @@ services:
 
 ## Conclusion
 
-This implementation plan provides a complete guide for deploying Backstage using Docker Compose. The setup includes:
+This implementation plan provides a complete guide for deploying Backstage using Docker Compose. 
 
-- Multi-stage Docker builds for optimized images
-- PostgreSQL database with persistent storage
-- GitHub authentication integration
-- Health checks and monitoring
-- Backup and restore procedures
-- Security best practices
+### Completed Setup
+- ✅ Multi-stage Docker builds for optimized images
+- ✅ PostgreSQL database with persistent storage
+- ✅ Docker Compose deployment working
+- ✅ Health checks implemented
+- ✅ Environment variable configuration
+- ✅ Basic security measures
+
+### Next Steps
+- ⏳ GitHub authentication integration
+- ⏳ Catalog configuration
+- ⏳ TechDocs setup
+- ⏳ Plugin installation
+- ⏳ Production SSL/TLS configuration
+- ⏳ Monitoring and observability
+- ⏳ Automated backups
+
+### Current Access
+- **Application URL**: http://localhost:7007
+- **Database**: PostgreSQL on port 5432
+- **Container Names**: backstage-app, backstage-postgres
 
 For additional customization and plugin development, refer to the official Backstage documentation at https://backstage.io/docs.
