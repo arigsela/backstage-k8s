@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: Platform Team responsible for Backstage and infrastructure
+spec:
+  type: team
+  children: []
+  members: []

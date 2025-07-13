@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-kubernetes-app
+  description: Test component with all plugins enabled - Kubernetes, Crossplane, and GitHub Actions
+  annotations:
+    # Kubernetes plugin annotations
+    backstage.io/kubernetes-id: test-app
+    backstage.io/kubernetes-namespace: backstage
+    backstage.io/kubernetes-label-selector: 'app=test-app'
+    # GitHub Actions plugin annotation
+    github.com/project-slug: 'arigsela/backstage-k8s'
+    # Crossplane plugin annotation
+    crossplane.io/claim-name: test-app
+    crossplane.io/claim-namespace: backstage
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team

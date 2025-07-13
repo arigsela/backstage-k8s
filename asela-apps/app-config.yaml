@@ -64,9 +64,16 @@ techdocs:
 
 auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers
+  environment: development
   providers:
     # See https://backstage.io/docs/auth/guest/provider
-    guest: {}
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
+    # GitHub OAuth provider for GitHub Actions plugin
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
 
 scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
@@ -76,7 +83,18 @@ catalog:
     entityFilename: catalog-info.yaml
     pullRequestBranchName: backstage-integration
   rules:
-    - allow: [Component, System, API, Resource, Location]
+    - allow: [Component, System, API, Resource, Location, User, Group]
+  providers:
+    kubernetesIngestor:
+      # Auto-ingest standard workloads
+      ingestWorkloads: true
+      # Auto-ingest Crossplane claims
+      ingestCrossplaneClaims: true
+      # Custom resource types to ingest (optional)
+      # customResources:
+      #   - group: apps.example.com
+      #     version: v1
+      #     kind: CustomApp
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
@@ -109,6 +127,14 @@ catalog:
 
 kubernetes:
   # see https://backstage.io/docs/features/kubernetes/configuration for kubernetes configuration options
+  serviceLocatorMethod:
+    type: 'singleTenant'
+  clusterLocatorMethods:
+    - type: 'config'
+      clusters:
+        - url: http://127.0.0.1:8001
+          name: local
+          authProvider: 'localKubectlProxy'
 
 # see https://backstage.io/docs/permissions/getting-started for more on the permission framework
 permission:

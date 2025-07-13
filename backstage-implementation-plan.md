@@ -4,13 +4,17 @@
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Architecture](#architecture)
-4. [Phase 1: Initial Setup](#phase-1-initial-setup)
-5. [Phase 2: Database Configuration](#phase-2-database-configuration)
-6. [Phase 3: Authentication Setup](#phase-3-authentication-setup)
-7. [Phase 4: Docker Compose Deployment](#phase-4-docker-compose-deployment)
-8. [Configuration Files](#configuration-files)
-9. [Deployment Steps](#deployment-steps)
-10. [Maintenance and Operations](#maintenance-and-operations)
+4. [Implementation Progress](#implementation-progress)
+5. [Completed Phases](#completed-phases)
+   - [Phase 1: Initial Setup](#phase-1-initial-setup) ✅
+   - [Phase 2: Database Configuration](#phase-2-database-configuration) ✅
+   - [Phase 3: Docker Compose Deployment](#phase-3-docker-compose-deployment) ✅
+6. [Remaining Phases](#remaining-phases)
+   - [Phase 4: POC Plugin Installation](#phase-4-poc-plugin-installation)
+   - [Phase 5: Production Configuration](#phase-5-production-configuration)
+7. [Configuration Files](#configuration-files)
+8. [Deployment Steps](#deployment-steps)
+9. [Maintenance and Operations](#maintenance-and-operations)
 
 ## Overview
 
@@ -76,18 +80,58 @@ This document provides a comprehensive guide for implementing Backstage using Do
 3. **nginx** (optional): Reverse proxy for SSL termination
 4. **oauth2-proxy** (optional): Authentication proxy
 
-## Phase 1: Initial Setup
+## Implementation Progress
+
+### Current Status
+- **Project Name**: asela-apps (created via `npx @backstage/create-app`)
+- **Environment**: Development and Docker Compose deployment ready
+- **Database**: PostgreSQL configured and running
+- **Access URL**: http://localhost:7007
+- **Branch**: adding-gh-authentication
+
+### Completed Items
+- ✅ Backstage application scaffolded and configured
+- ✅ PostgreSQL database integration (replaced SQLite)
+- ✅ Docker multi-stage build configured
+- ✅ Docker Compose deployment working
+- ✅ Environment variables configured with secure defaults
+- ✅ Health checks implemented
+- ✅ Application accessible via Docker containers
+
+### Pending Items (Phase 4 - POC Focus)
+- ⏳ Kubernetes plugin installation and configuration
+- ⏳ Kubernetes Ingestor setup for auto-discovery
+- ⏳ Crossplane plugin integration
+- ⏳ GitHub Actions plugin setup
+- ⏳ Test entity creation with all plugins
+- ⏳ Production Kubernetes cluster configuration
+- ⏳ RBAC setup for Kubernetes access
+
+## Completed Phases
+
+## Phase 1: Initial Setup ✅
 
 ### Step 1: Create Project Directory
 ```bash
-mkdir backstage-deployment
-cd backstage-deployment
+mkdir backstage-k8s
+cd backstage-k8s
 ```
 
 ### Step 2: Create Backstage App
+**Actual command used:**
 ```bash
-npx @backstage/create-app@latest --name backstage
-cd backstage
+npx @backstage/create-app@latest
+# App name provided: asela-apps
+cd asela-apps
+```
+
+### Step 3: Verify Installation
+```bash
+# Start development server
+yarn start
+
+# Verify app is running at http://localhost:3000 (frontend)
+# Backend runs at http://localhost:7007
 ```
 
 ### Step 3: Initial Configuration
@@ -156,10 +200,59 @@ catalog:
         - allow: [User, Group]
 ```
 
-## Phase 2: Database Configuration
+## Phase 2: Database Configuration ✅
 
-### Step 1: Create Production Configuration
-Create `app-config.production.yaml`:
+### Step 1: Install PostgreSQL Dependencies
+```bash
+cd asela-apps
+yarn --cwd packages/backend add pg
+```
+
+### Step 2: Create Docker Compose for Local Development
+Created `docker-compose.dev.yml`:
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: backstage-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: backstage
+      POSTGRES_PASSWORD: backstage
+      POSTGRES_DB: backstage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backstage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+    driver: local
+```
+
+### Step 3: Update Local Configuration
+Updated `app-config.local.yaml`:
+```yaml
+backend:
+  database:
+    client: pg
+    connection:
+      host: localhost
+      port: 5432
+      user: backstage
+      password: backstage
+      database: backstage
+```
+
+### Step 4: Create Production Configuration
+Created `app-config.production.yaml`:
 
 ```yaml
 app:
@@ -181,13 +274,6 @@ backend:
       ssl:
         require: ${POSTGRES_SSL_REQUIRED}
         rejectUnauthorized: false
-
-auth:
-  providers:
-    github:
-      development:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
 ```
 
 ### Step 2: Install PostgreSQL Dependencies
@@ -195,63 +281,20 @@ auth:
 yarn --cwd packages/backend add pg
 ```
 
-## Phase 3: Authentication Setup
+### Step 5: Test Database Connection
+```bash
+# Start PostgreSQL
+docker-compose -f docker-compose.dev.yml up -d
 
-### Step 1: Configure GitHub OAuth App
-1. Go to GitHub Settings > Developer settings > OAuth Apps
-2. Create new OAuth App with:
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `http://localhost:7007/api/auth/github/handler/frame`
-
-### Step 2: Update Frontend Authentication
-Edit `packages/app/src/App.tsx`:
-
-```tsx
-import { githubAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-
-const app = createApp({
-  apis,
-  bindRoutes({ bind }) {
-    /* existing bindings */
-  },
-  components: {
-    SignInPage: props => (
-      <SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'github-auth-provider',
-          title: 'GitHub',
-          message: 'Sign in using GitHub',
-          apiRef: githubAuthApiRef,
-        }}
-      />
-    ),
-  },
-});
+# Verify Backstage connects to PostgreSQL
+yarn start
+# Check logs for PostgreSQL connection confirmation
 ```
 
-### Step 3: Configure Sign-in Resolvers
-Update `app-config.production.yaml`:
-
-```yaml
-auth:
-  environment: production
-  providers:
-    github:
-      production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-        signIn:
-          resolvers:
-            - resolver: usernameMatchingUserEntityName
-```
-
-## Phase 4: Docker Compose Deployment
+## Phase 3: Docker Compose Deployment ✅
 
 ### Step 1: Create Multi-Stage Dockerfile
-Create `Dockerfile` in the project root:
+Created `asela-apps/Dockerfile`:
 
 ```dockerfile
 # Stage 1: Build
@@ -285,7 +328,7 @@ COPY . .
 RUN yarn tsc
 
 # Build backend
-RUN yarn build:backend --config app-config.yaml --config app-config.production.yaml
+RUN yarn build:backend
 
 # Stage 2: Runtime
 FROM node:20-bookworm-slim
@@ -298,10 +341,10 @@ RUN apt-get update && \
     yarn config set python /usr/bin/python3
 
 # Install mkdocs-techdocs-core for TechDocs
-RUN pip3 install mkdocs-techdocs-core==1.1.7
+RUN pip3 install --break-system-packages mkdocs-techdocs-core==1.1.7
 
 # Create non-root user
-RUN groupadd -r backstage && useradd -r -g backstage backstage
+RUN groupadd -r backstage && useradd -r -g backstage -m backstage
 
 # Set working directory
 WORKDIR /app
@@ -316,7 +359,8 @@ USER backstage
 ENV NODE_ENV=production
 
 # Copy built application from build stage
-COPY --from=build --chown=backstage:backstage /app/yarn.lock /app/package.json /app/.yarn /app/.yarnrc.yml ./
+COPY --from=build --chown=backstage:backstage /app/yarn.lock /app/package.json /app/.yarnrc.yml ./
+COPY --from=build --chown=backstage:backstage /app/.yarn/releases /app/.yarn/releases
 COPY --from=build --chown=backstage:backstage /app/packages/backend/dist/skeleton.tar.gz ./
 
 # Extract skeleton
@@ -344,7 +388,7 @@ CMD ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app
 ```
 
 ### Step 2: Create Docker Compose Configuration
-Create `docker-compose.yml`:
+Created `docker-compose.yml` in root directory:
 
 ```yaml
 version: '3.8'
@@ -372,7 +416,7 @@ services:
 
   backstage:
     build:
-      context: .
+      context: ./asela-apps
       dockerfile: Dockerfile
     container_name: backstage-app
     restart: unless-stopped
@@ -391,10 +435,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-backstage}
       POSTGRES_SSL_REQUIRED: ${POSTGRES_SSL_REQUIRED:-false}
       
-      # Auth configuration
+      # Backend configuration
       BACKEND_SECRET: ${BACKEND_SECRET}
-      AUTH_GITHUB_CLIENT_ID: ${AUTH_GITHUB_CLIENT_ID}
-      AUTH_GITHUB_CLIENT_SECRET: ${AUTH_GITHUB_CLIENT_SECRET}
       
       # GitHub integration
       GITHUB_TOKEN: ${GITHUB_TOKEN}
@@ -457,19 +499,44 @@ BACKSTAGE_PORT=7007
 APP_BASE_URL=http://localhost:3000
 BACKEND_BASE_URL=http://localhost:7007
 
-# Authentication
+# Backend Configuration
 BACKEND_SECRET=your-backend-secret-key
-AUTH_GITHUB_CLIENT_ID=your-github-client-id
-AUTH_GITHUB_CLIENT_SECRET=your-github-client-secret
 
-# GitHub Integration
-GITHUB_TOKEN=your-github-personal-access-token
+# GitHub Integration (optional - currently disabled)
+# GITHUB_TOKEN=your-github-personal-access-token
 
 # Node.js Configuration
 NODE_ENV=production
 ```
 
-### Step 4: Create Nginx Configuration (Optional)
+### Step 4: Deploy with Docker Compose
+```bash
+# Copy .env.example to .env
+cp .env.example .env
+
+# Generate secure backend secret
+openssl rand -hex 32
+# Update BACKEND_SECRET in .env with generated value
+
+# Generate secure PostgreSQL password
+openssl rand -base64 20 | tr -d "=+/" | cut -c1-16
+# Update POSTGRES_PASSWORD in .env with generated value
+
+# Build and start services
+docker-compose build
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f backstage
+
+# Access application
+# Open http://localhost:7007 in browser
+```
+
+### Step 5: Create Nginx Configuration (Optional)
 Create `nginx.conf`:
 
 ```nginx
@@ -517,19 +584,26 @@ http {
 
 ### Directory Structure
 ```
-backstage-deployment/
-├── backstage/
+backstage-k8s/
+├── asela-apps/
 │   ├── app-config.yaml
+│   ├── app-config.local.yaml (gitignored)
 │   ├── app-config.production.yaml
 │   ├── Dockerfile
+│   ├── docker-compose.dev.yml
 │   ├── packages/
 │   │   ├── app/
 │   │   └── backend/
 │   └── ...
 ├── docker-compose.yml
-├── .env
+├── .env (gitignored)
 ├── .env.example
+├── backstage-implementation-plan.md
+├── README.md
 ├── nginx.conf (optional)
+├── scripts/
+│   ├── backup.sh
+│   └── restore.sh
 └── ssl/ (optional)
     ├── cert.pem
     └── key.pem
@@ -585,6 +659,424 @@ proxy:
     headers:
       Authorization: 'Bearer ${SONARQUBE_TOKEN}'
 ```
+
+## Remaining Phases
+
+## Phase 4: POC Plugin Installation
+
+This phase focuses on installing and configuring essential plugins for a Kubernetes-focused POC: Kubernetes, Kubernetes Ingestor, Crossplane, and GitHub Actions.
+
+### Prerequisites
+- Backstage application running with PostgreSQL
+- Access to a Kubernetes cluster (local or remote)
+- GitHub account and repository access
+- Node.js 20.x and Yarn installed
+
+### Step 1: Install Kubernetes Plugin
+
+#### Frontend Installation
+```bash
+# Install the Kubernetes frontend plugin
+cd asela-apps
+yarn --cwd packages/app add @backstage/plugin-kubernetes
+```
+
+#### Update Entity Page
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { EntityKubernetesContent } from '@backstage/plugin-kubernetes';
+
+// Add to the service entity page
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/kubernetes" title="Kubernetes">
+      <EntityKubernetesContent />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
+
+#### Backend Installation
+```bash
+# Install the Kubernetes backend plugin
+yarn --cwd packages/backend add @backstage/plugin-kubernetes-backend
+```
+
+#### Configure Kubernetes Clusters
+
+**Local Development Configuration**
+
+For local development, use the 'local' cluster locator:
+```yaml
+# app-config.local.yaml
+kubernetes:
+  serviceLocatorMethod: 'singleTenant'
+  clusterLocatorMethods:
+    - 'local'  # Uses kubectl proxy on port 8001
+```
+
+Start kubectl proxy:
+```bash
+kubectl proxy --port=8001
+```
+
+**Production - In-Cluster Configuration**
+
+When Backstage is deployed in the same cluster it monitors:
+```yaml
+# app-config.production.yaml
+kubernetes:
+  serviceLocatorMethod: 'singleTenant'
+  clusterLocatorMethods:
+    - 'config'
+  clusters:
+    - url: https://kubernetes.default.svc
+      name: local-cluster
+      authProvider: 'serviceAccount'
+      # Uses the pod's service account token automatically mounted at:
+      # /var/run/secrets/kubernetes.io/serviceaccount/token
+```
+
+The URL `https://kubernetes.default.svc` is the standard in-cluster API server address. Kubernetes automatically:
+- Provides this DNS name for the API server
+- Mounts service account credentials in the pod
+- Handles TLS certificates
+
+#### Add Kubernetes Annotations to Entities
+Update your `catalog-info.yaml` files:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    # Option 1: Simple entity matching
+    'backstage.io/kubernetes-id': my-service
+    
+    # Option 2: Label selector
+    # 'backstage.io/kubernetes-label-selector': 'app=my-app,component=backend'
+```
+
+### Step 2: Install Kubernetes Ingestor Plugin
+
+The Kubernetes Ingestor automatically creates catalog entities from Kubernetes resources.
+
+#### Backend Installation
+```bash
+# Install the ingestor plugin (from TeraSky)
+yarn --cwd packages/backend add @terasky/backstage-plugin-kubernetes-ingestor
+```
+
+#### Configure the Ingestor
+Add to `packages/backend/src/index.ts`:
+```typescript
+import { KubernetesIngestorProvider } from '@terasky/backstage-plugin-kubernetes-ingestor';
+
+// In your backend initialization
+backend.add(
+  KubernetesIngestorProvider.fromConfig(env.config, {
+    logger: env.logger,
+    discovery: env.discovery,
+    tokenManager: env.tokenManager,
+  })
+);
+```
+
+Update `app-config.yaml`:
+```yaml
+catalog:
+  providers:
+    kubernetesIngestor:
+      # Auto-ingest standard workloads
+      ingestWorkloads: true
+      # Auto-ingest Crossplane claims
+      ingestCrossplaneClaims: true
+      # Custom resource types to ingest
+      customResources:
+        - group: apps.example.com
+          version: v1
+          kind: CustomApp
+```
+
+### Step 3: Install Crossplane Plugin
+
+#### Frontend Installation
+```bash
+# Install Crossplane resources plugin
+yarn --cwd packages/app add @terasky/backstage-plugin-crossplane-resources-frontend
+```
+
+#### Backend Permissions Installation (Optional)
+```bash
+# If using permissions framework
+yarn --cwd packages/backend add @terasky/backstage-plugin-crossplane-permissions
+```
+
+#### Update Entity Page for Crossplane
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { 
+  CrossplaneAllResourcesTable, 
+  CrossplaneResourceGraph, 
+  isCrossplaneAvailable,
+  CrossplaneOverviewCard 
+} from '@terasky/backstage-plugin-crossplane-resources-frontend';
+
+// Add to overview page
+const overviewContent = (
+  <Grid container spacing={3}>
+    {/* ... existing cards ... */}
+    <EntitySwitch>
+      <EntitySwitch.Case if={isCrossplaneAvailable}>
+        <Grid item md={6}>
+          <CrossplaneOverviewCard />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
+  </Grid>
+);
+
+// Add Crossplane tab
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/crossplane" title="Crossplane">
+      <CrossplaneAllResourcesTable />
+    </EntityLayout.Route>
+    <EntityLayout.Route path="/crossplane-graph" title="Resource Graph">
+      <CrossplaneResourceGraph />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
+
+### Step 4: Install GitHub Actions Plugin
+
+#### Frontend Installation
+```bash
+# Install the community GitHub Actions plugin
+yarn --cwd packages/app add @backstage-community/plugin-github-actions
+```
+
+#### Backend Configuration (if needed)
+```bash
+# If not already installed for GitHub auth
+yarn --cwd packages/backend add @backstage/plugin-auth-backend-module-github-provider
+```
+
+#### Update Entity Page for GitHub Actions
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { 
+  EntityGithubActionsContent,
+  isGithubActionsAvailable,
+  EntityRecentGithubActionsRunsCard
+} from '@backstage-community/plugin-github-actions';
+
+// Add to overview page
+const cicdCard = (
+  <EntitySwitch>
+    <EntitySwitch.Case if={isGithubActionsAvailable}>
+      <Grid item sm={6}>
+        <EntityRecentGithubActionsRunsCard limit={4} variant="gridItem" />
+      </Grid>
+    </EntitySwitch.Case>
+  </EntitySwitch>
+);
+
+// Add CI/CD tab
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/ci-cd" title="CI/CD">
+      <EntityGithubActionsContent />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
+
+#### Configure GitHub Integration
+Update `app-config.yaml`:
+```yaml
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}  # Personal Access Token with repo and actions:read permissions
+
+# For GitHub OAuth (optional)
+auth:
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+```
+
+#### Add GitHub Annotations to Entities
+Update your `catalog-info.yaml` files:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    github.com/project-slug: 'myorg/my-service-repo'
+```
+
+### Step 5: Test Plugin Integration
+
+#### 1. Restart Backstage
+```bash
+# Stop current instance
+# Then rebuild and start
+yarn install
+yarn dev
+```
+
+#### 2. Create Test Entities
+Create `examples/test-component.yaml`:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-kubernetes-app
+  description: Test component with all plugins enabled
+  annotations:
+    backstage.io/kubernetes-id: test-app
+    backstage.io/kubernetes-label-selector: 'app=test-app'
+    github.com/project-slug: 'myorg/test-app'
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+```
+
+#### 3. Register the Component
+1. Navigate to http://localhost:3000/catalog-import
+2. Enter the URL or paste the YAML content
+3. Import the component
+
+#### 4. Verify Plugin Functionality
+- Check the Kubernetes tab shows cluster resources
+- Verify GitHub Actions tab displays workflow runs
+- Confirm Crossplane resources are visible (if you have Crossplane installed)
+
+### Troubleshooting
+
+#### Kubernetes Plugin Issues
+```bash
+# Quick start for kubectl proxy
+kubectl proxy --port=8001 &  # Run in background
+# Or in foreground to see logs
+kubectl proxy --port=8001
+
+# Check current context
+kubectl config current-context
+
+# Test proxy is working
+curl http://localhost:8001/api/v1/namespaces
+
+# Verify cluster access
+kubectl cluster-info
+
+# Check service account permissions
+kubectl auth can-i list pods --all-namespaces
+
+# If using specific kubeconfig file
+export KUBECONFIG=/path/to/your/kubeconfig
+kubectl proxy --port=8001
+```
+
+#### GitHub Actions Issues
+- Ensure GitHub token has `repo` and `actions:read` permissions
+- Verify the `github.com/project-slug` annotation matches your repository
+
+#### Crossplane Plugin Issues
+- Ensure Kubernetes Ingestor is properly configured
+- Verify Crossplane is installed in your cluster
+- Check that Crossplane claims exist in the cluster
+
+### Production Deployment Requirements
+
+#### RBAC Configuration for In-Cluster Access
+When running Backstage in Kubernetes, create the necessary RBAC permissions:
+
+```yaml
+# kubernetes-rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backstage
+  namespace: backstage
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-kubernetes-reader
+rules:
+  # Core resources
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "limitranges", "resourcequotas"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+  # For metrics
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # For Crossplane resources (if using Crossplane plugin)
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backstage-kubernetes-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backstage-kubernetes-reader
+subjects:
+  - kind: ServiceAccount
+    name: backstage
+    namespace: backstage
+```
+
+Apply this before deploying Backstage:
+```bash
+kubectl create namespace backstage
+kubectl apply -f kubernetes-rbac.yaml
+```
+
+Then update your Docker Compose deployment to use this service account when deploying to Kubernetes.
+
+### Next Steps
+Once plugins are working:
+1. Deploy Backstage to Kubernetes with proper service account
+2. Test in-cluster API access
+3. Create templates for Crossplane resources
+4. Integrate GitHub Actions workflows with Backstage
+5. Add monitoring and alerting for deployed resources
+
+## Phase 5: Production Configuration
+
+### Production Readiness
+1. SSL/TLS certificate setup
+2. Domain configuration  
+3. Production authentication setup
+4. Monitoring and observability
+5. Backup automation
+6. Security hardening
+7. High availability configuration
 
 ## Deployment Steps
 
@@ -813,13 +1305,28 @@ services:
 
 ## Conclusion
 
-This implementation plan provides a complete guide for deploying Backstage using Docker Compose. The setup includes:
+This implementation plan provides a complete guide for deploying Backstage using Docker Compose. 
 
-- Multi-stage Docker builds for optimized images
-- PostgreSQL database with persistent storage
-- GitHub authentication integration
-- Health checks and monitoring
-- Backup and restore procedures
-- Security best practices
+### Completed Setup
+- ✅ Multi-stage Docker builds for optimized images
+- ✅ PostgreSQL database with persistent storage
+- ✅ Docker Compose deployment working
+- ✅ Health checks implemented
+- ✅ Environment variable configuration
+- ✅ Basic security measures
+
+### Next Steps (POC Focus)
+- ⏳ Install Kubernetes plugin for cluster visibility
+- ⏳ Configure Kubernetes Ingestor for auto-discovery
+- ⏳ Set up Crossplane plugin for infrastructure management
+- ⏳ Enable GitHub Actions plugin for CI/CD visibility
+- ⏳ Create test entities demonstrating all plugin capabilities
+- ⏳ Configure production Kubernetes cluster access
+- ⏳ Implement proper RBAC for secure cluster access
+
+### Current Access
+- **Application URL**: http://localhost:7007
+- **Database**: PostgreSQL on port 5432
+- **Container Names**: backstage-app, backstage-postgres
 
 For additional customization and plugin development, refer to the official Backstage documentation at https://backstage.io/docs.

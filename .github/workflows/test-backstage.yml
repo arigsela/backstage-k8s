@@ -1,0 +1,36 @@
+name: Test Backstage CI/CD
+
+on:
+  push:
+    branches: [ main, adding-gh-authentication ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      working-directory: ./asela-apps
+      run: yarn install --frozen-lockfile
+      
+    - name: Run type check
+      working-directory: ./asela-apps
+      run: yarn tsc
+      
+    - name: Run tests
+      working-directory: ./asela-apps
+      run: yarn test --passWithNoTests
+      
+    - name: Build Backstage
+      working-directory: ./asela-apps
+      run: yarn build:backend

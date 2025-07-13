@@ -15,3 +15,14 @@ metadata:
 spec:
   type: team
   children: []
+---
+# Platform team group for test entities
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: Platform Team responsible for Backstage and infrastructure
+spec:
+  type: team
+  children: []
+  members: []

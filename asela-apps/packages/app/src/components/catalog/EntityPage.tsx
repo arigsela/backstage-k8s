@@ -58,6 +58,19 @@ import {
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
 
+import { 
+  CrossplaneAllResourcesTable, 
+  CrossplaneResourceGraph, 
+  isCrossplaneAvailable,
+  CrossplaneOverviewCard 
+} from '@terasky/backstage-plugin-crossplane-resources-frontend';
+
+import { 
+  EntityGithubActionsContent,
+  isGithubActionsAvailable,
+  EntityRecentGithubActionsRunsCard
+} from '@backstage-community/plugin-github-actions';
+
 const techdocsContent = (
   <EntityTechdocsContent>
     <TechDocsAddons>
@@ -67,16 +80,10 @@ const techdocsContent = (
 );
 
 const cicdContent = (
-  // This is an example of how you can implement your company's logic in entity page.
-  // You can for example enforce that all components of type 'service' should use GitHubActions
   <EntitySwitch>
-    {/*
-      Here you can add support for different CI/CD services, for example
-      using @backstage-community/plugin-github-actions as follows:
-      <EntitySwitch.Case if={isGithubActionsAvailable}>
-        <EntityGithubActionsContent />
-      </EntitySwitch.Case>
-     */}
+    <EntitySwitch.Case if={isGithubActionsAvailable}>
+      <EntityGithubActionsContent />
+    </EntitySwitch.Case>
     <EntitySwitch.Case>
       <EmptyState
         title="No CI/CD available for this entity"
@@ -140,6 +147,20 @@ const overviewContent = (
     <Grid item md={8} xs={12}>
       <EntityHasSubcomponentsCard variant="gridItem" />
     </Grid>
+    <EntitySwitch>
+      <EntitySwitch.Case if={isCrossplaneAvailable}>
+        <Grid item md={6}>
+          <CrossplaneOverviewCard />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
+    <EntitySwitch>
+      <EntitySwitch.Case if={isGithubActionsAvailable}>
+        <Grid item sm={6}>
+          <EntityRecentGithubActionsRunsCard limit={4} variant="gridItem" />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
   </Grid>
 );
 
@@ -159,6 +180,22 @@ const serviceEntityPage = (
       if={isKubernetesAvailable}
     >
       <EntityKubernetesContent />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route 
+      path="/crossplane" 
+      title="Crossplane"
+      if={isCrossplaneAvailable}
+    >
+      <CrossplaneAllResourcesTable />
+    </EntityLayout.Route>
+    
+    <EntityLayout.Route 
+      path="/crossplane-graph" 
+      title="Resource Graph"
+      if={isCrossplaneAvailable}
+    >
+      <CrossplaneResourceGraph />
     </EntityLayout.Route>
 
     <EntityLayout.Route path="/api" title="API">

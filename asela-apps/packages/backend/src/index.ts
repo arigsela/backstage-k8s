@@ -22,6 +22,9 @@ backend.add(import('@backstage/plugin-auth-backend'));
 backend.add(import('@backstage/plugin-auth-backend-module-guest-provider'));
 // See https://backstage.io/docs/auth/guest/provider
 
+// GitHub auth provider
+backend.add(import('@backstage/plugin-auth-backend-module-github-provider'));
+
 // catalog plugin
 backend.add(import('@backstage/plugin-catalog-backend'));
 backend.add(
@@ -51,5 +54,8 @@ backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 
 // kubernetes
 backend.add(import('@backstage/plugin-kubernetes-backend'));
+
+// kubernetes ingestor - auto-discover k8s resources as catalog entities
+backend.add(import('@terasky/backstage-plugin-kubernetes-ingestor'));
 
 backend.start();
