@@ -6,9 +6,13 @@ metadata:
   annotations:
     # Kubernetes plugin annotations
     backstage.io/kubernetes-id: test-app
+    backstage.io/kubernetes-namespace: backstage
     backstage.io/kubernetes-label-selector: 'app=test-app'
-    # GitHub Actions plugin annotation - update with your repo
-    github.com/project-slug: 'myorg/test-app'
+    # GitHub Actions plugin annotation
+    github.com/project-slug: 'arigsela/backstage-k8s'
+    # Crossplane plugin annotation
+    crossplane.io/claim-name: test-app
+    crossplane.io/claim-namespace: backstage
 spec:
   type: service
   lifecycle: production
