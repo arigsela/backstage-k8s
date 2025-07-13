@@ -1,0 +1,68 @@
+name: Test ECR OIDC Authentication
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  ECR_REPOSITORY: backstage
+
+jobs:
+  test-oidc:
+    name: Test OIDC and ECR Access
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions-Test-${{ github.run_id }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Verify AWS Identity
+        run: |
+          echo "Testing AWS OIDC authentication..."
+          aws sts get-caller-identity
+      
+      - name: Check ECR Access
+        run: |
+          echo "Checking ECR repository access..."
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} 2>/dev/null || \
+            echo "Repository ${{ env.ECR_REPOSITORY }} not found. Creating it..."
+          
+      - name: Create ECR Repository (if needed)
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} 2>/dev/null || \
+          aws ecr create-repository \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256 \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Test Docker Push Permission
+        run: |
+          echo "Testing push permission to ECR..."
+          docker pull alpine:latest
+          docker tag alpine:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:test-oidc
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:test-oidc
+          
+          echo "✅ Successfully pushed test image to ECR!"
+          echo "Registry: ${{ steps.login-ecr.outputs.registry }}"
+          echo "Repository: ${{ env.ECR_REPOSITORY }}"
+          
+      - name: Cleanup Test Image
+        run: |
+          aws ecr batch-delete-image \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-ids imageTag=test-oidc \
+            --region ${{ env.AWS_REGION }} || true
