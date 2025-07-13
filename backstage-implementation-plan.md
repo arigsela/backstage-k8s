@@ -6,8 +6,7 @@
 3. [Architecture](#architecture)
 4. [Phase 1: Initial Setup](#phase-1-initial-setup)
 5. [Phase 2: Database Configuration](#phase-2-database-configuration)
-6. [Phase 3: Authentication Setup](#phase-3-authentication-setup)
-7. [Phase 4: Docker Compose Deployment](#phase-4-docker-compose-deployment)
+6. [Phase 3: Docker Compose Deployment](#phase-3-docker-compose-deployment)
 8. [Configuration Files](#configuration-files)
 9. [Deployment Steps](#deployment-steps)
 10. [Maintenance and Operations](#maintenance-and-operations)
@@ -181,13 +180,6 @@ backend:
       ssl:
         require: ${POSTGRES_SSL_REQUIRED}
         rejectUnauthorized: false
-
-auth:
-  providers:
-    github:
-      development:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
 ```
 
 ### Step 2: Install PostgreSQL Dependencies
@@ -195,60 +187,7 @@ auth:
 yarn --cwd packages/backend add pg
 ```
 
-## Phase 3: Authentication Setup
-
-### Step 1: Configure GitHub OAuth App
-1. Go to GitHub Settings > Developer settings > OAuth Apps
-2. Create new OAuth App with:
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `http://localhost:7007/api/auth/github/handler/frame`
-
-### Step 2: Update Frontend Authentication
-Edit `packages/app/src/App.tsx`:
-
-```tsx
-import { githubAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-
-const app = createApp({
-  apis,
-  bindRoutes({ bind }) {
-    /* existing bindings */
-  },
-  components: {
-    SignInPage: props => (
-      <SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'github-auth-provider',
-          title: 'GitHub',
-          message: 'Sign in using GitHub',
-          apiRef: githubAuthApiRef,
-        }}
-      />
-    ),
-  },
-});
-```
-
-### Step 3: Configure Sign-in Resolvers
-Update `app-config.production.yaml`:
-
-```yaml
-auth:
-  environment: production
-  providers:
-    github:
-      production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-        signIn:
-          resolvers:
-            - resolver: usernameMatchingUserEntityName
-```
-
-## Phase 4: Docker Compose Deployment
+## Phase 3: Docker Compose Deployment
 
 ### Step 1: Create Multi-Stage Dockerfile
 Create `Dockerfile` in the project root:
@@ -391,10 +330,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-backstage}
       POSTGRES_SSL_REQUIRED: ${POSTGRES_SSL_REQUIRED:-false}
       
-      # Auth configuration
+      # Backend configuration
       BACKEND_SECRET: ${BACKEND_SECRET}
-      AUTH_GITHUB_CLIENT_ID: ${AUTH_GITHUB_CLIENT_ID}
-      AUTH_GITHUB_CLIENT_SECRET: ${AUTH_GITHUB_CLIENT_SECRET}
       
       # GitHub integration
       GITHUB_TOKEN: ${GITHUB_TOKEN}
@@ -457,10 +394,8 @@ BACKSTAGE_PORT=7007
 APP_BASE_URL=http://localhost:3000
 BACKEND_BASE_URL=http://localhost:7007
 
-# Authentication
+# Backend Configuration
 BACKEND_SECRET=your-backend-secret-key
-AUTH_GITHUB_CLIENT_ID=your-github-client-id
-AUTH_GITHUB_CLIENT_SECRET=your-github-client-secret
 
 # GitHub Integration
 GITHUB_TOKEN=your-github-personal-access-token
