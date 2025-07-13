@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: backstage-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-backstage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-backstage}
+      POSTGRES_DB: ${POSTGRES_DB:-backstage}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-backstage}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backstage
+
+  backstage:
+    build:
+      context: ./asela-apps
+      dockerfile: Dockerfile
+    container_name: backstage-app
+    restart: unless-stopped
+    ports:
+      - "${BACKSTAGE_PORT:-7007}:7007"
+    environment:
+      # App configuration
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:7007}
+      
+      # Database configuration
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-backstage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-backstage}
+      POSTGRES_DB: ${POSTGRES_DB:-backstage}
+      POSTGRES_SSL_REQUIRED: ${POSTGRES_SSL_REQUIRED:-false}
+      
+      # Auth configuration
+      BACKEND_SECRET: ${BACKEND_SECRET}
+      AUTH_GITHUB_CLIENT_ID: ${AUTH_GITHUB_CLIENT_ID}
+      AUTH_GITHUB_CLIENT_SECRET: ${AUTH_GITHUB_CLIENT_SECRET}
+      
+      # GitHub integration
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      
+      # Node.js configuration
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backstage
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7007/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Nginx reverse proxy for SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: backstage-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backstage
+    networks:
+      - backstage
+    profiles:
+      - with-nginx
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  backstage:
+    driver: bridge
