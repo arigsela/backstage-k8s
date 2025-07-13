@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-kubernetes-app
+  description: Test component with all plugins enabled - Kubernetes, Crossplane, and GitHub Actions
+  annotations:
+    # Kubernetes plugin annotations
+    backstage.io/kubernetes-id: test-app
+    backstage.io/kubernetes-label-selector: 'app=test-app'
+    # GitHub Actions plugin annotation - update with your repo
+    github.com/project-slug: 'myorg/test-app'
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team

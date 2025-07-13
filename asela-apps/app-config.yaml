@@ -32,12 +32,12 @@ backend:
     connection: ':memory:'
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
 
-# integrations:
-#   github:
-#     - host: github.com
-#       # This is a Personal Access Token or PAT from GitHub. You can find out how to generate this token, and more information
-#       # about setting up the GitHub integration here: https://backstage.io/docs/integrations/github/locations#configuration
-#       token: ${GITHUB_TOKEN}
+integrations:
+  github:
+    - host: github.com
+      # This is a Personal Access Token or PAT from GitHub. You can find out how to generate this token, and more information
+      # about setting up the GitHub integration here: https://backstage.io/docs/integrations/github/locations#configuration
+      token: ${GITHUB_TOKEN}
     ### Example for how to add your GitHub Enterprise instance using the API:
     # - host: ghe.example.net
     #   apiBaseUrl: https://ghe.example.net/api/v3
@@ -79,6 +79,17 @@ catalog:
     pullRequestBranchName: backstage-integration
   rules:
     - allow: [Component, System, API, Resource, Location]
+  providers:
+    kubernetesIngestor:
+      # Auto-ingest standard workloads
+      ingestWorkloads: true
+      # Auto-ingest Crossplane claims
+      ingestCrossplaneClaims: true
+      # Custom resource types to ingest (optional)
+      # customResources:
+      #   - group: apps.example.com
+      #     version: v1
+      #     kind: CustomApp
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
@@ -111,6 +122,14 @@ catalog:
 
 kubernetes:
   # see https://backstage.io/docs/features/kubernetes/configuration for kubernetes configuration options
+  serviceLocatorMethod:
+    type: 'singleTenant'
+  clusterLocatorMethods:
+    - type: 'config'
+      clusters:
+        - url: http://localhost:8001
+          name: local
+          authProvider: 'localKubectlProxy'
 
 # see https://backstage.io/docs/permissions/getting-started for more on the permission framework
 permission:

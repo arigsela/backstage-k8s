@@ -52,4 +52,7 @@ backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 // kubernetes
 backend.add(import('@backstage/plugin-kubernetes-backend'));
 
+// kubernetes ingestor - auto-discover k8s resources as catalog entities
+backend.add(import('@terasky/backstage-plugin-kubernetes-ingestor'));
+
 backend.start();

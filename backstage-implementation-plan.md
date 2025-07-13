@@ -10,11 +10,8 @@
    - [Phase 2: Database Configuration](#phase-2-database-configuration) ✅
    - [Phase 3: Docker Compose Deployment](#phase-3-docker-compose-deployment) ✅
 6. [Remaining Phases](#remaining-phases)
-   - [Phase 4: Authentication Setup](#phase-4-authentication-setup)
-   - [Phase 5: Catalog Configuration](#phase-5-catalog-configuration)
-   - [Phase 6: TechDocs Setup](#phase-6-techdocs-setup)
-   - [Phase 7: Plugin Installation](#phase-7-plugin-installation)
-   - [Phase 8: Production Configuration](#phase-8-production-configuration)
+   - [Phase 4: POC Plugin Installation](#phase-4-poc-plugin-installation)
+   - [Phase 5: Production Configuration](#phase-5-production-configuration)
 7. [Configuration Files](#configuration-files)
 8. [Deployment Steps](#deployment-steps)
 9. [Maintenance and Operations](#maintenance-and-operations)
@@ -101,14 +98,14 @@ This document provides a comprehensive guide for implementing Backstage using Do
 - ✅ Health checks implemented
 - ✅ Application accessible via Docker containers
 
-### Pending Items
-- ⏳ GitHub OAuth authentication
-- ⏳ Catalog locations configuration
-- ⏳ TechDocs setup
-- ⏳ Additional plugins
-- ⏳ Production SSL/TLS setup
-- ⏳ Monitoring and observability
-- ⏳ Backup automation
+### Pending Items (Phase 4 - POC Focus)
+- ⏳ Kubernetes plugin installation and configuration
+- ⏳ Kubernetes Ingestor setup for auto-discovery
+- ⏳ Crossplane plugin integration
+- ⏳ GitHub Actions plugin setup
+- ⏳ Test entity creation with all plugins
+- ⏳ Production Kubernetes cluster configuration
+- ⏳ RBAC setup for Kubernetes access
 
 ## Completed Phases
 
@@ -665,68 +662,421 @@ proxy:
 
 ## Remaining Phases
 
-## Phase 4: Authentication Setup
+## Phase 4: POC Plugin Installation
 
-### GitHub OAuth Configuration
-1. Create GitHub OAuth App at https://github.com/settings/applications/new
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `http://localhost:7007/api/auth/github/handler/frame`
+This phase focuses on installing and configuring essential plugins for a Kubernetes-focused POC: Kubernetes, Kubernetes Ingestor, Crossplane, and GitHub Actions.
 
-2. Update `.env` file:
-   ```bash
-   AUTH_GITHUB_CLIENT_ID=your-github-client-id
-   AUTH_GITHUB_CLIENT_SECRET=your-github-client-secret
-   ```
+### Prerequisites
+- Backstage application running with PostgreSQL
+- Access to a Kubernetes cluster (local or remote)
+- GitHub account and repository access
+- Node.js 20.x and Yarn installed
 
-3. Update `app-config.yaml`:
-   ```yaml
-   integrations:
-     github:
-       - host: github.com
-         token: ${GITHUB_TOKEN}
-   
-   auth:
-     providers:
-       github:
-         development:
-           clientId: ${AUTH_GITHUB_CLIENT_ID}
-           clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-   ```
+### Step 1: Install Kubernetes Plugin
 
-## Phase 5: Catalog Configuration
+#### Frontend Installation
+```bash
+# Install the Kubernetes frontend plugin
+cd asela-apps
+yarn --cwd packages/app add @backstage/plugin-kubernetes
+```
 
-### Add Catalog Sources
-1. Create catalog entities for your services
-2. Configure catalog locations in `app-config.yaml`
-3. Set up catalog refresh schedules
-4. Configure entity processors
+#### Update Entity Page
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { EntityKubernetesContent } from '@backstage/plugin-kubernetes';
 
-## Phase 6: TechDocs Setup
+// Add to the service entity page
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/kubernetes" title="Kubernetes">
+      <EntityKubernetesContent />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
 
-### Enable Documentation
-1. Configure TechDocs builder and publisher
-2. Set up documentation storage (local or cloud)
-3. Create documentation for your components
-4. Configure MkDocs plugins
+#### Backend Installation
+```bash
+# Install the Kubernetes backend plugin
+yarn --cwd packages/backend add @backstage/plugin-kubernetes-backend
+```
 
-## Phase 7: Plugin Installation
+#### Configure Kubernetes Clusters
 
-### Common Plugins to Consider
-- Kubernetes plugin for cluster visibility
-- Jenkins/CircleCI/GitHub Actions for CI/CD
-- SonarQube for code quality
-- PagerDuty for incident management
-- Cost insights for cloud spending
+**Local Development Configuration**
 
-## Phase 8: Production Configuration
+For local development, use the 'local' cluster locator:
+```yaml
+# app-config.local.yaml
+kubernetes:
+  serviceLocatorMethod: 'singleTenant'
+  clusterLocatorMethods:
+    - 'local'  # Uses kubectl proxy on port 8001
+```
+
+Start kubectl proxy:
+```bash
+kubectl proxy --port=8001
+```
+
+**Production - In-Cluster Configuration**
+
+When Backstage is deployed in the same cluster it monitors:
+```yaml
+# app-config.production.yaml
+kubernetes:
+  serviceLocatorMethod: 'singleTenant'
+  clusterLocatorMethods:
+    - 'config'
+  clusters:
+    - url: https://kubernetes.default.svc
+      name: local-cluster
+      authProvider: 'serviceAccount'
+      # Uses the pod's service account token automatically mounted at:
+      # /var/run/secrets/kubernetes.io/serviceaccount/token
+```
+
+The URL `https://kubernetes.default.svc` is the standard in-cluster API server address. Kubernetes automatically:
+- Provides this DNS name for the API server
+- Mounts service account credentials in the pod
+- Handles TLS certificates
+
+#### Add Kubernetes Annotations to Entities
+Update your `catalog-info.yaml` files:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    # Option 1: Simple entity matching
+    'backstage.io/kubernetes-id': my-service
+    
+    # Option 2: Label selector
+    # 'backstage.io/kubernetes-label-selector': 'app=my-app,component=backend'
+```
+
+### Step 2: Install Kubernetes Ingestor Plugin
+
+The Kubernetes Ingestor automatically creates catalog entities from Kubernetes resources.
+
+#### Backend Installation
+```bash
+# Install the ingestor plugin (from TeraSky)
+yarn --cwd packages/backend add @terasky/backstage-plugin-kubernetes-ingestor
+```
+
+#### Configure the Ingestor
+Add to `packages/backend/src/index.ts`:
+```typescript
+import { KubernetesIngestorProvider } from '@terasky/backstage-plugin-kubernetes-ingestor';
+
+// In your backend initialization
+backend.add(
+  KubernetesIngestorProvider.fromConfig(env.config, {
+    logger: env.logger,
+    discovery: env.discovery,
+    tokenManager: env.tokenManager,
+  })
+);
+```
+
+Update `app-config.yaml`:
+```yaml
+catalog:
+  providers:
+    kubernetesIngestor:
+      # Auto-ingest standard workloads
+      ingestWorkloads: true
+      # Auto-ingest Crossplane claims
+      ingestCrossplaneClaims: true
+      # Custom resource types to ingest
+      customResources:
+        - group: apps.example.com
+          version: v1
+          kind: CustomApp
+```
+
+### Step 3: Install Crossplane Plugin
+
+#### Frontend Installation
+```bash
+# Install Crossplane resources plugin
+yarn --cwd packages/app add @terasky/backstage-plugin-crossplane-resources-frontend
+```
+
+#### Backend Permissions Installation (Optional)
+```bash
+# If using permissions framework
+yarn --cwd packages/backend add @terasky/backstage-plugin-crossplane-permissions
+```
+
+#### Update Entity Page for Crossplane
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { 
+  CrossplaneAllResourcesTable, 
+  CrossplaneResourceGraph, 
+  isCrossplaneAvailable,
+  CrossplaneOverviewCard 
+} from '@terasky/backstage-plugin-crossplane-resources-frontend';
+
+// Add to overview page
+const overviewContent = (
+  <Grid container spacing={3}>
+    {/* ... existing cards ... */}
+    <EntitySwitch>
+      <EntitySwitch.Case if={isCrossplaneAvailable}>
+        <Grid item md={6}>
+          <CrossplaneOverviewCard />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
+  </Grid>
+);
+
+// Add Crossplane tab
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/crossplane" title="Crossplane">
+      <CrossplaneAllResourcesTable />
+    </EntityLayout.Route>
+    <EntityLayout.Route path="/crossplane-graph" title="Resource Graph">
+      <CrossplaneResourceGraph />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
+
+### Step 4: Install GitHub Actions Plugin
+
+#### Frontend Installation
+```bash
+# Install the community GitHub Actions plugin
+yarn --cwd packages/app add @backstage-community/plugin-github-actions
+```
+
+#### Backend Configuration (if needed)
+```bash
+# If not already installed for GitHub auth
+yarn --cwd packages/backend add @backstage/plugin-auth-backend-module-github-provider
+```
+
+#### Update Entity Page for GitHub Actions
+Edit `packages/app/src/components/catalog/EntityPage.tsx`:
+```typescript
+import { 
+  EntityGithubActionsContent,
+  isGithubActionsAvailable,
+  EntityRecentGithubActionsRunsCard
+} from '@backstage-community/plugin-github-actions';
+
+// Add to overview page
+const cicdCard = (
+  <EntitySwitch>
+    <EntitySwitch.Case if={isGithubActionsAvailable}>
+      <Grid item sm={6}>
+        <EntityRecentGithubActionsRunsCard limit={4} variant="gridItem" />
+      </Grid>
+    </EntitySwitch.Case>
+  </EntitySwitch>
+);
+
+// Add CI/CD tab
+const serviceEntityPage = (
+  <EntityLayout>
+    {/* ... existing routes ... */}
+    <EntityLayout.Route path="/ci-cd" title="CI/CD">
+      <EntityGithubActionsContent />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+```
+
+#### Configure GitHub Integration
+Update `app-config.yaml`:
+```yaml
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}  # Personal Access Token with repo and actions:read permissions
+
+# For GitHub OAuth (optional)
+auth:
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+```
+
+#### Add GitHub Annotations to Entities
+Update your `catalog-info.yaml` files:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    github.com/project-slug: 'myorg/my-service-repo'
+```
+
+### Step 5: Test Plugin Integration
+
+#### 1. Restart Backstage
+```bash
+# Stop current instance
+# Then rebuild and start
+yarn install
+yarn dev
+```
+
+#### 2. Create Test Entities
+Create `examples/test-component.yaml`:
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-kubernetes-app
+  description: Test component with all plugins enabled
+  annotations:
+    backstage.io/kubernetes-id: test-app
+    backstage.io/kubernetes-label-selector: 'app=test-app'
+    github.com/project-slug: 'myorg/test-app'
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+```
+
+#### 3. Register the Component
+1. Navigate to http://localhost:3000/catalog-import
+2. Enter the URL or paste the YAML content
+3. Import the component
+
+#### 4. Verify Plugin Functionality
+- Check the Kubernetes tab shows cluster resources
+- Verify GitHub Actions tab displays workflow runs
+- Confirm Crossplane resources are visible (if you have Crossplane installed)
+
+### Troubleshooting
+
+#### Kubernetes Plugin Issues
+```bash
+# Quick start for kubectl proxy
+kubectl proxy --port=8001 &  # Run in background
+# Or in foreground to see logs
+kubectl proxy --port=8001
+
+# Check current context
+kubectl config current-context
+
+# Test proxy is working
+curl http://localhost:8001/api/v1/namespaces
+
+# Verify cluster access
+kubectl cluster-info
+
+# Check service account permissions
+kubectl auth can-i list pods --all-namespaces
+
+# If using specific kubeconfig file
+export KUBECONFIG=/path/to/your/kubeconfig
+kubectl proxy --port=8001
+```
+
+#### GitHub Actions Issues
+- Ensure GitHub token has `repo` and `actions:read` permissions
+- Verify the `github.com/project-slug` annotation matches your repository
+
+#### Crossplane Plugin Issues
+- Ensure Kubernetes Ingestor is properly configured
+- Verify Crossplane is installed in your cluster
+- Check that Crossplane claims exist in the cluster
+
+### Production Deployment Requirements
+
+#### RBAC Configuration for In-Cluster Access
+When running Backstage in Kubernetes, create the necessary RBAC permissions:
+
+```yaml
+# kubernetes-rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backstage
+  namespace: backstage
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-kubernetes-reader
+rules:
+  # Core resources
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "limitranges", "resourcequotas"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+  # For metrics
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # For Crossplane resources (if using Crossplane plugin)
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backstage-kubernetes-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backstage-kubernetes-reader
+subjects:
+  - kind: ServiceAccount
+    name: backstage
+    namespace: backstage
+```
+
+Apply this before deploying Backstage:
+```bash
+kubectl create namespace backstage
+kubectl apply -f kubernetes-rbac.yaml
+```
+
+Then update your Docker Compose deployment to use this service account when deploying to Kubernetes.
+
+### Next Steps
+Once plugins are working:
+1. Deploy Backstage to Kubernetes with proper service account
+2. Test in-cluster API access
+3. Create templates for Crossplane resources
+4. Integrate GitHub Actions workflows with Backstage
+5. Add monitoring and alerting for deployed resources
+
+## Phase 5: Production Configuration
 
 ### Production Readiness
 1. SSL/TLS certificate setup
-2. Domain configuration
-3. Authentication provider setup
-4. Monitoring and alerting
+2. Domain configuration  
+3. Production authentication setup
+4. Monitoring and observability
 5. Backup automation
 6. Security hardening
+7. High availability configuration
 
 ## Deployment Steps
 
@@ -965,14 +1315,14 @@ This implementation plan provides a complete guide for deploying Backstage using
 - ✅ Environment variable configuration
 - ✅ Basic security measures
 
-### Next Steps
-- ⏳ GitHub authentication integration
-- ⏳ Catalog configuration
-- ⏳ TechDocs setup
-- ⏳ Plugin installation
-- ⏳ Production SSL/TLS configuration
-- ⏳ Monitoring and observability
-- ⏳ Automated backups
+### Next Steps (POC Focus)
+- ⏳ Install Kubernetes plugin for cluster visibility
+- ⏳ Configure Kubernetes Ingestor for auto-discovery
+- ⏳ Set up Crossplane plugin for infrastructure management
+- ⏳ Enable GitHub Actions plugin for CI/CD visibility
+- ⏳ Create test entities demonstrating all plugin capabilities
+- ⏳ Configure production Kubernetes cluster access
+- ⏳ Implement proper RBAC for secure cluster access
 
 ### Current Access
 - **Application URL**: http://localhost:7007
