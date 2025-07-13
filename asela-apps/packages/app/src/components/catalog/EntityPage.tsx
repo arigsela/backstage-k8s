@@ -58,17 +58,17 @@ import {
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
 
-import { 
-  CrossplaneAllResourcesTable, 
-  CrossplaneResourceGraph, 
+import {
+  CrossplaneAllResourcesTable,
+  CrossplaneResourceGraph,
   isCrossplaneAvailable,
-  CrossplaneOverviewCard 
+  CrossplaneOverviewCard,
 } from '@terasky/backstage-plugin-crossplane-resources-frontend';
 
-import { 
+import {
   EntityGithubActionsContent,
   isGithubActionsAvailable,
-  EntityRecentGithubActionsRunsCard
+  EntityRecentGithubActionsRunsCard,
 } from '@backstage-community/plugin-github-actions';
 
 const techdocsContent = (
@@ -182,16 +182,16 @@ const serviceEntityPage = (
       <EntityKubernetesContent />
     </EntityLayout.Route>
 
-    <EntityLayout.Route 
-      path="/crossplane" 
+    <EntityLayout.Route
+      path="/crossplane"
       title="Crossplane"
       if={isCrossplaneAvailable}
     >
       <CrossplaneAllResourcesTable />
     </EntityLayout.Route>
-    
-    <EntityLayout.Route 
-      path="/crossplane-graph" 
+
+    <EntityLayout.Route
+      path="/crossplane-graph"
       title="Resource Graph"
       if={isCrossplaneAvailable}
     >
