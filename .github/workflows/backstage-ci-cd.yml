@@ -161,11 +161,37 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Test ECR scan logic in PR (temporary for testing)
+  test-ecr-scan:
+    name: Test ECR Scan Logic
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simulate ECR registry output
+        id: test-ecr
+        run: |
+          echo "Testing image URI construction"
+          echo "registry=123456789012.dkr.ecr.us-east-1.amazonaws.com" >> $GITHUB_OUTPUT
+          
+      - name: Test image reference
+        run: |
+          IMAGE_URI="${{ steps.test-ecr.outputs.registry }}/backstage:latest"
+          echo "Image URI would be: $IMAGE_URI"
+          echo "This is what Trivy would scan: $IMAGE_URI"
+          
+          # Test that the reference is valid
+          if [[ "$IMAGE_URI" =~ ^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+$ ]]; then
+            echo "✅ Image reference is valid"
+          else
+            echo "❌ Image reference is invalid"
+            exit 1
+          fi
+
   # PR Gate - All checks must pass
   pr-gate:
     name: PR Gate
     if: github.event_name == 'pull_request'
-    needs: [code-quality, test, security, docker-pr]
+    needs: [code-quality, test, security, docker-pr, test-ecr-scan]
     runs-on: ubuntu-latest
     steps:
       - name: PR Gate Status
@@ -177,6 +203,7 @@ jobs:
           echo "- Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Docker Build: ${{ needs.docker-pr.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ECR Scan Test: ${{ needs.test-ecr-scan.result }}" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
   # MAIN WORKFLOW - Runs on push to main
@@ -256,6 +283,7 @@ jobs:
     name: Scan ECR Image
     needs: build-push
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Run Trivy on ECR image
         uses: aquasecurity/trivy-action@master
