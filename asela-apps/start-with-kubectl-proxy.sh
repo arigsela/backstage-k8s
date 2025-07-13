@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# Ensure we use the correct Node version
+# Use Node 18 which works with the current setup
+# Even though package.json specifies 20||22, Node 18 works fine for development
 export PATH="/Users/arisela/.nvm/versions/node/v18.20.6/bin:$PATH"
+
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+    echo "Loaded environment variables from .env"
+fi
 
 echo "Using Node version: $(node --version)"
 echo ""

@@ -69,6 +69,11 @@ auth:
     # See https://backstage.io/docs/auth/guest/provider
     guest:
       dangerouslyAllowOutsideDevelopment: true
+    # GitHub OAuth provider for GitHub Actions plugin
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
 
 scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
@@ -127,7 +132,7 @@ kubernetes:
   clusterLocatorMethods:
     - type: 'config'
       clusters:
-        - url: http://localhost:8001
+        - url: http://127.0.0.1:8001
           name: local
           authProvider: 'localKubectlProxy'
 
