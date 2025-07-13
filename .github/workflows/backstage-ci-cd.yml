@@ -188,7 +188,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
-      image-uri: ${{ steps.meta.outputs.tags }}
+      image-uri: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
       image-digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
@@ -256,6 +256,7 @@ jobs:
     name: Scan ECR Image
     needs: build-push
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Run Trivy on ECR image
         uses: aquasecurity/trivy-action@master
