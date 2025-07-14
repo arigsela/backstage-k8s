@@ -1,0 +1,28 @@
+apiVersion: platform.io/v1alpha1
+kind: MySQLDatabase
+metadata:
+  name: ${{ values.name }}
+  namespace: ${{ values.namespace }}
+  labels:
+    app.kubernetes.io/name: ${{ values.name }}
+    app.kubernetes.io/managed-by: backstage
+    backstage.io/kubernetes-id: ${{ values.name }}
+  annotations:
+    backstage.io/kubernetes-id: ${{ values.name }}
+    backstage.io/kubernetes-namespace: ${{ values.namespace }}
+spec:
+  parameters:
+    databaseName: ${{ values.databaseName }}
+    username: ${{ values.username }}
+    userNamespace: ${{ values.userNamespace }}
+    databaseNamespace: ${{ values.namespace }}
+    privileges:
+      {%- for privilege in values.privileges %}
+      - "{{ privilege }}"
+      {%- endfor %}
+    passwordSecretRef:
+      name: ${{ values.name }}-secret
+      key: DB_PASSWORD
+      namespace: ${{ values.namespace }}
+  writeConnectionSecretToRef:
+    name: ${{ values.name }}-connection

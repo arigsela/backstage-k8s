@@ -40,13 +40,22 @@ spec:
         userNamespace:
           title: User Namespace
           type: string
-          description: Namespace where user credentials will be created (leave empty to use <namespace>-backend)
+          description: Namespace where user credentials will be created
+          default: "${{ parameters.namespace }}-backend"
     - title: Vault Configuration
+      required:
+        - vaultSecretPath
       properties:
+        vaultSecretPath:
+          title: Vault Secret Path
+          type: string
+          description: Path in Vault where the database password is stored
+          default: "secret/data/mysql/${{ parameters.name }}"
         vaultSecretKey:
           title: Vault Secret Key
           type: string
-          description: Key name in Vault (e.g., test-app-database). If empty, will use <name>-database
+          description: Key in Vault secret containing the password
+          default: "password"
         privileges:
           title: Database Privileges
           type: array
@@ -74,29 +83,15 @@ spec:
       action: fetch:template
       input:
         url: ./content
-        targetPath: ./output
         values:
           name: ${{ parameters.name }}
           namespace: ${{ parameters.namespace }}
           databaseName: ${{ parameters.databaseName }}
           username: ${{ parameters.username }}
-          userNamespace: ${{ parameters.userNamespace or parameters.namespace }}
+          userNamespace: ${{ parameters.userNamespace }}
+          vaultSecretPath: ${{ parameters.vaultSecretPath }}
           vaultSecretKey: ${{ parameters.vaultSecretKey }}
           privileges: ${{ parameters.privileges }}
-        
-    - id: rename-files
-      name: Organize Files
-      action: fs:rename
-      input:
-        files:
-          - from: ./output/argocd-app.yaml.tpl
-            to: ./output/base-apps/${{ parameters.namespace }}-${{ parameters.name }}.yaml
-          - from: ./output/resources/secret_stores.yaml
-            to: ./output/base-apps/${{ parameters.namespace }}-${{ parameters.name }}/secret_stores.yaml
-          - from: ./output/resources/external_secrets.yaml  
-            to: ./output/base-apps/${{ parameters.namespace }}-${{ parameters.name }}/external_secrets.yaml
-          - from: ./output/resources/mysql-database.yaml
-            to: ./output/base-apps/${{ parameters.namespace }}-${{ parameters.name }}/mysql-database.yaml
 
     - id: publish
       name: Publish to GitHub
@@ -104,7 +99,6 @@ spec:
       input:
         repoUrl: github.com?owner=arigsela&repo=kubernetes
         title: "Deploy MySQLDatabase: ${{ parameters.name }}"
-        update: true
         description: |
           This PR creates a new MySQLDatabase resource via Crossplane XRD.
           
@@ -121,20 +115,19 @@ spec:
           - External Secret: `base-apps/${{ parameters.namespace }}-${{ parameters.name }}/external_secrets.yaml`
           - MySQL Database: `base-apps/${{ parameters.namespace }}-${{ parameters.name }}/mysql-database.yaml`
         branchName: mysql-db-${{ parameters.namespace }}-${{ parameters.name }}
-        sourcePath: ./output
+        targetPath: ./
 
-    # Catalog registration is optional - the resource will be discovered via GitOps
-    # - id: register
-    #   name: Register in Catalog  
-    #   action: catalog:register
-    #   input:
-    #     repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
-    #     catalogInfoPath: ./base-apps/${{ parameters.namespace }}-${{ parameters.name }}/catalog-info.yaml
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: '/base-apps/${{ parameters.namespace }}-${{ parameters.name }}/catalog-info.yaml'
 
   output:
     links:
       - title: Pull Request
-        url: ${{ steps['publish'].output.remoteUrl }}
-      - title: View Repository
-        icon: github
-        url: https://github.com/arigsela/kubernetes
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

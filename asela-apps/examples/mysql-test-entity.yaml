@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: asela5-mysql
+  description: MySQL Database in asela5 namespace
+  annotations:
+    backstage.io/kubernetes-id: asela5
+    backstage.io/kubernetes-namespace: asela5
+spec:
+  type: database
+  owner: platform-team
+  lifecycle: production
+  system: crossplane-resources

@@ -77,6 +77,10 @@ auth:
 
 scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
+  defaultAuthor:
+    name: Backstage Scaffolder
+    email: backstage@example.com
+  defaultCommitMessage: "feat: Deploy MySQLDatabase ${{ values.name }} via Backstage"
 
 catalog:
   import:
@@ -85,26 +89,42 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, User, Group]
   providers:
+    github:
+      gitops-resources:
+        organization: 'arigsela'
+        catalogPath: 'base-apps/**/catalog-info.yaml'
+        filters:
+          branch: 'main'
+          repository: 'kubernetes'
+        schedule:
+          frequency: { minutes: 5 }
+          timeout: { minutes: 3 }
     kubernetesIngestor:
-      # Auto-ingest standard workloads
-      ingestWorkloads: true
-      # Auto-ingest Crossplane claims
-      ingestCrossplaneClaims: true
-      # Custom resource types to ingest (optional)
-      # customResources:
-      #   - group: apps.example.com
-      #     version: v1
-      #     kind: CustomApp
+      disableDefaultWorkloadTypes: false
+      onlyIngestAnnotatedResources: false
+      crossplane:
+        claims:
+          ingestAllClaims: true
+        xrds:
+          enabled: true
+      taskRunner:
+        frequency: 1
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
       target: ../../examples/entities.yaml
-
-    # Local example template
+    
+    # Crossplane MySQL Database Template
     - type: file
-      target: ../../examples/template/template.yaml
+      target: ../../templates/crossplane-mysql-database/template.yaml
       rules:
         - allow: [Template]
+
+    # Local example template (disabled due to conflict)
+    # - type: file
+    #   target: ../../examples/template/template.yaml
+    #   rules:
+    #     - allow: [Template]
 
     # Local example organizational data
     - type: file
@@ -132,9 +152,13 @@ kubernetes:
   clusterLocatorMethods:
     - type: 'config'
       clusters:
-        - url: http://127.0.0.1:8001
-          name: local
+        - url: http://localhost:8080
+          name: default
           authProvider: 'localKubectlProxy'
+  customResources:
+    - group: platform.io
+      apiVersion: v1alpha1
+      plural: mysqldatabases
 
 # see https://backstage.io/docs/permissions/getting-started for more on the permission framework
 permission:

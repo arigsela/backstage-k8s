@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.name }}
+  description: MySQL Database provisioned via Crossplane
+  annotations:
+    backstage.io/kubernetes-id: ${{ values.name }}
+    backstage.io/kubernetes-namespace: ${{ values.namespace }}
+    argocd/app-name: ${{ values.namespace }}-${{ values.name }}
+spec:
+  type: database
+  owner: platform-team
+  lifecycle: production
+  system: crossplane-resources
+  dependsOn:
+    - resource:default/crossplane-provider-mysql

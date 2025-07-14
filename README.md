@@ -69,6 +69,8 @@ backstage-k8s/
 - **Multi-stage Docker Build**: Optimized image size
 - **Security**: Non-root user, environment variable management
 - **Optional HTTPS**: Nginx reverse proxy configuration
+- **Crossplane Integration**: Visualize and deploy Crossplane XRDs
+- **GitOps Ready**: Templates for infrastructure-as-code workflows
 
 ## Commands
 
@@ -99,10 +101,28 @@ docker-compose exec postgres pg_dump -U backstage backstage > backup.sql
 docker-compose exec -T postgres psql -U backstage backstage < backup.sql
 ```
 
+## Crossplane XRD Deployment (New Feature)
+
+Backstage now supports deploying Crossplane Custom Resource Definitions (XRDs) through GitOps workflows. See the [Crossplane XRD Deployment Proposal](./docs/crossplane-xrd-deployment-proposal.md) for detailed implementation.
+
+### Quick Example: Deploy a MySQL Database
+
+1. Navigate to the Software Catalog
+2. Click "Create Component"
+3. Select "Crossplane MySQL Database" template
+4. Fill in the database details
+5. Submit to create a PR to your GitOps repository
+6. Once merged, ArgoCD/Flux will deploy the resource
+
+### Available Crossplane Templates
+- **MySQL Database**: Create managed MySQL databases with custom permissions
+- More templates coming soon (PostgreSQL, Redis, S3 Buckets)
+
 ## Support
 
 For issues and questions:
 - Check the [troubleshooting section](./backstage-implementation-plan.md#troubleshooting) in the implementation plan
+- See [Crossplane XRD Deployment Guide](./docs/crossplane-xrd-deployment-proposal.md) for infrastructure deployment
 - Refer to the [official Backstage documentation](https://backstage.io/docs)
 - Submit issues to this repository
 

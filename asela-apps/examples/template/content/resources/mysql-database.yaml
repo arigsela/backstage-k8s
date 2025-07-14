@@ -1,0 +1,21 @@
+apiVersion: platform.io/v1alpha1
+kind: MySQLDatabase
+metadata:
+  name: ${{ values.name }}
+  namespace: ${{ values.namespace }}
+spec:
+  compositionRef:
+    name: xmysqldatabase.platform.io
+  parameters:
+    databaseName: ${{ values.databaseName }}
+    username: ${{ values.username }}
+    userNamespace: ${{ values.userNamespace or values.namespace }}
+    databaseNamespace: ${{ values.namespace }}
+    privileges:
+      ${{ values.privileges | dump | indent(6) | safe }}
+    passwordSecretRef:
+      name: ${{ values.name }}-secret
+      key: DB_PASSWORD
+      namespace: ${{ values.namespace }}
+  writeConnectionSecretToRef:
+    name: ${{ values.name }}-connection

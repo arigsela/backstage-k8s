@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-backstage}
       POSTGRES_DB: ${POSTGRES_DB:-backstage}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -52,7 +52,9 @@ services:
       
       # Node.js configuration
       NODE_ENV: production
-      NODE_OPTIONS: "--max-old-space-size=4096"
+      NODE_OPTIONS: "--max-old-space-size=4096 --no-node-snapshot"
+    volumes:
+      - ./asela-apps/examples:/app/examples:ro
     depends_on:
       postgres:
         condition: service_healthy
