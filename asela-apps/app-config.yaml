@@ -162,8 +162,8 @@ kubernetesIngestor:
         plural: providers
     # By default all standard kubernetes workload types are ingested
     disableDefaultWorkloadTypes: false
-    # Set to false to discover all resources (not just annotated ones)
-    onlyIngestAnnotatedResources: false
+    # Set to true to only discover resources with backstage annotations
+    onlyIngestAnnotatedResources: true
   crossplane:
     # This section is relevant for crossplane v1 claims as well as Crossplane v2 XRs.
     claims:
