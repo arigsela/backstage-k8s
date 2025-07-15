@@ -193,10 +193,7 @@ const serviceEntityPage = (
       </IfCrossplaneResourcesListAvailable>
     </EntityLayout.Route>
 
-    <EntityLayout.Route
-      path="/crossplane-graph"
-      title="Crossplane Graph"
-    >
+    <EntityLayout.Route path="/crossplane-graph" title="Crossplane Graph">
       <IfCrossplaneResourceGraphAvailable>
         <CrossplaneResourceGraphSelector />
       </IfCrossplaneResourceGraphAvailable>
@@ -467,9 +464,9 @@ const CrossplaneEntityPage = () => {
         {crossplaneOverviewContent}
       </EntityLayout.Route>
 
-      <EntityLayout.Route 
-        if={isResourcesListAvailable} 
-        path="/crossplane-resources" 
+      <EntityLayout.Route
+        if={isResourcesListAvailable}
+        path="/crossplane-resources"
         title="Crossplane Resources"
       >
         <IfCrossplaneResourcesListAvailable>
@@ -477,9 +474,9 @@ const CrossplaneEntityPage = () => {
         </IfCrossplaneResourcesListAvailable>
       </EntityLayout.Route>
 
-      <EntityLayout.Route 
-        if={isResourceGraphAvailable} 
-        path="/crossplane-graph" 
+      <EntityLayout.Route
+        if={isResourceGraphAvailable}
+        path="/crossplane-graph"
         title="Crossplane Graph"
       >
         <IfCrossplaneResourceGraphAvailable>
@@ -506,7 +503,7 @@ export const entityPage = (
     <EntitySwitch.Case if={isKind('user')} children={userPage} />
     <EntitySwitch.Case if={isKind('system')} children={systemPage} />
     <EntitySwitch.Case if={isKind('domain')} children={domainPage} />
-    
+
     <EntitySwitch.Case if={isComponentType('crossplane-claim')}>
       <CrossplaneEntityPage />
     </EntitySwitch.Case>

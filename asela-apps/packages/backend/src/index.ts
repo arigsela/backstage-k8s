@@ -64,6 +64,8 @@ backend.add(import('@terasky/backstage-plugin-crossplane-permissions-backend'));
 // scaffolder backend modules
 backend.add(import('@backstage/plugin-scaffolder-backend-module-gitlab'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-bitbucket'));
-backend.add(import('@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils'));
+backend.add(
+  import('@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils'),
+);
 
 backend.start();

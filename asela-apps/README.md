@@ -35,6 +35,7 @@ cp .env.example .env
 ```
 
 Edit `.env` and set:
+
 - `GITHUB_TOKEN`: Personal access token for GitHub API access
 - `AUTH_GITHUB_CLIENT_ID` and `AUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth app credentials
 - PostgreSQL credentials (if using production setup)
@@ -48,6 +49,7 @@ For development with Kubernetes integration:
 ```
 
 This script:
+
 - Starts `kubectl proxy` on port 8001
 - Starts Backstage on port 3000 (frontend) and 7007 (backend)
 - Enables Kubernetes plugin features
@@ -69,7 +71,7 @@ metadata:
   annotations:
     backstage.io/kubernetes-id: my-app
     backstage.io/kubernetes-namespace: default
-    backstage.io/kubernetes-label-selector: "app=my-app"
+    backstage.io/kubernetes-label-selector: 'app=my-app'
 ```
 
 ### TeraSky Kubernetes Ingestor
@@ -83,17 +85,17 @@ The ingestor is configured in `app-config.yaml`:
 ```yaml
 kubernetesIngestor:
   mappings:
-    namespaceModel: 'namespace'  # How to map namespaces
-    nameModel: 'name-namespace'  # How to name entities
-    titleModel: 'name'          # How to title entities
-    systemModel: 'default'      # How to map to systems
+    namespaceModel: 'namespace' # How to map namespaces
+    nameModel: 'name-namespace' # How to name entities
+    titleModel: 'name' # How to title entities
+    systemModel: 'default' # How to map to systems
   components:
     enabled: true
     taskRunner:
-      frequency: 60             # Run every 60 seconds
-      timeout: 600              # 10 minutes timeout
-    ingestWorkloads: true       # Auto-ingest deployments, statefulsets, etc.
-    onlyIngestAnnotatedResources: true  # Only ingest annotated resources
+      frequency: 60 # Run every 60 seconds
+      timeout: 600 # 10 minutes timeout
+    ingestWorkloads: true # Auto-ingest deployments, statefulsets, etc.
+    onlyIngestAnnotatedResources: true # Only ingest annotated resources
     excludedNamespaces:
       - kube-system
       - kube-public
@@ -111,24 +113,25 @@ metadata:
   name: my-app
   annotations:
     # Required for discovery
-    terasky.backstage.io/add-to-catalog: "true"
-    
+    terasky.backstage.io/add-to-catalog: 'true'
+
     # Optional metadata
     terasky.backstage.io/system: my-system
     terasky.backstage.io/owner: platform-team
     terasky.backstage.io/component-type: service
     terasky.backstage.io/lifecycle: production
     terasky.backstage.io/source-code-repo-url: https://github.com/myorg/myapp
-    
+
     # For Kubernetes plugin integration
     backstage.io/kubernetes-id: my-app
     backstage.io/kubernetes-namespace: default
-    backstage.io/kubernetes-label-selector: "app=my-app"
+    backstage.io/kubernetes-label-selector: 'app=my-app'
 ```
 
 #### Testing Kubernetes Discovery
 
 1. Apply the test resources:
+
 ```bash
 kubectl apply -f test-k8s-deployment-corrected.yaml
 ```
@@ -199,16 +202,19 @@ yarn build:all
 ### Kubernetes Connection Issues
 
 1. Ensure kubectl proxy is running:
+
 ```bash
 kubectl proxy
 ```
 
 2. Verify cluster access:
+
 ```bash
 kubectl cluster-info
 ```
 
 3. Check the Kubernetes configuration in `app-config.yaml`:
+
 ```yaml
 kubernetes:
   clusterLocatorMethods:
@@ -223,13 +229,15 @@ kubernetes:
 ### Kubernetes Ingestor Not Discovering Resources
 
 1. Check that resources have the required annotation:
+
 ```yaml
-terasky.backstage.io/add-to-catalog: "true"
+terasky.backstage.io/add-to-catalog: 'true'
 ```
 
 2. Verify the namespace is not excluded in configuration
 
 3. Check logs for errors:
+
 ```bash
 # Look for KubernetesEntityProvider logs
 ```

@@ -135,7 +135,7 @@ permission:
 
 # Crossplane plugin configuration
 crossplane:
-  enablePermissions: false  # Set to true if using RBAC permission framework
+  enablePermissions: false # Set to true if using RBAC permission framework
 
 # Kubernetes Ingestor configuration
 kubernetesIngestor:
@@ -148,13 +148,13 @@ kubernetesIngestor:
   components:
     enabled: true
     taskRunner:
-      frequency: 60  # Already set in your config
+      frequency: 60 # Already set in your config
       timeout: 600
     excludedNamespaces:
       - kube-public
       - kube-system
       - kube-node-lease
-      - crossplane-system  # Don't ingest Crossplane system components
+      - crossplane-system # Don't ingest Crossplane system components
     # Custom Resource Types to also generate components for
     customWorkloadTypes:
       - group: pkg.crossplane.io
@@ -184,7 +184,7 @@ kubernetesIngestor:
       enabled: true
       taskRunner:
         # How often to query the clusters for data
-        frequency: 120  # Check XRDs every 2 minutes
+        frequency: 120 # Check XRDs every 2 minutes
         timeout: 600
       # Allows ingestion to be opt-in or opt-out by either requiring or not a dedicated annotation
       ingestAllXRDs: true
@@ -203,4 +203,4 @@ kubernetesIngestor:
       allowRepoSelection: true
     crdLabelSelector:
       key: terasky.backstage.io/generate-form
-      value: "true"
+      value: 'true'
