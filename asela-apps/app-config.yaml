@@ -84,17 +84,7 @@ catalog:
     pullRequestBranchName: backstage-integration
   rules:
     - allow: [Component, System, API, Resource, Location, User, Group]
-  providers:
-    kubernetesIngestor:
-      # Auto-ingest standard workloads
-      ingestWorkloads: true
-      # Auto-ingest Crossplane claims
-      ingestCrossplaneClaims: true
-      # Custom resource types to ingest (optional)
-      # customResources:
-      #   - group: apps.example.com
-      #     version: v1
-      #     kind: CustomApp
+  providers: {}
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
@@ -134,9 +124,47 @@ kubernetes:
       clusters:
         - url: http://127.0.0.1:8001
           name: local
-          authProvider: 'localKubectlProxy'
+          authProvider: 'serviceAccount'
+          serviceAccountToken: 'unused-token-for-proxy'
+          skipTLSVerify: true
 
 # see https://backstage.io/docs/permissions/getting-started for more on the permission framework
 permission:
   # setting this to `false` will disable permissions
   enabled: true
+
+# Kubernetes Ingestor configuration
+kubernetesIngestor:
+  mappings:
+    # How to map namespaces to systems
+    namespaceModel: 'namespace' # namespace | cluster | default
+    # How to name entities
+    nameModel: 'name-namespace' # name | name-cluster | name-namespace | name-kind
+    # How to title entities
+    titleModel: 'name' # name | name-cluster | name-namespace
+    # How to map to systems
+    systemModel: 'namespace' # cluster | namespace | cluster-namespace | default
+  components:
+    # Enable component creation
+    enabled: true
+    # Task runner configuration
+    taskRunner:
+      frequency: 60 # Run every 60 seconds instead of default 10 minutes
+      timeout: 600 # 10 minutes in seconds
+    # Auto-ingest standard workloads
+    ingestWorkloads: true
+    # Only ingest resources with annotations
+    onlyAnnotated: false
+    # Exclude system namespaces
+    excludedNamespaces:
+      - kube-system
+      - kube-public
+      - kube-node-lease
+  crossplane:
+    # Auto-ingest Crossplane claims
+    ingestCrossplaneClaims: true
+  # Custom resource types to ingest (optional)
+  # customResources:
+  #   - group: apps.example.com
+  #     version: v1
+  #     kind: CustomApp
