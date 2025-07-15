@@ -58,4 +58,12 @@ backend.add(import('@backstage/plugin-kubernetes-backend'));
 // kubernetes ingestor - auto-discover k8s resources as catalog entities
 backend.add(import('@terasky/backstage-plugin-kubernetes-ingestor'));
 
+// crossplane permissions backend
+backend.add(import('@terasky/backstage-plugin-crossplane-permissions-backend'));
+
+// scaffolder backend modules
+backend.add(import('@backstage/plugin-scaffolder-backend-module-gitlab'));
+backend.add(import('@backstage/plugin-scaffolder-backend-module-bitbucket'));
+backend.add(import('@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils'));
+
 backend.start();
