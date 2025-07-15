@@ -59,10 +59,14 @@ import {
 } from '@backstage/plugin-kubernetes';
 
 import {
-  CrossplaneAllResourcesTable,
-  CrossplaneResourceGraph,
-  isCrossplaneAvailable,
-  CrossplaneOverviewCard,
+  CrossplaneResourcesTableSelector,
+  CrossplaneOverviewCardSelector,
+  CrossplaneResourceGraphSelector,
+  useResourceGraphAvailable,
+  useResourcesListAvailable,
+  IfCrossplaneOverviewAvailable,
+  IfCrossplaneResourceGraphAvailable,
+  IfCrossplaneResourcesListAvailable,
 } from '@terasky/backstage-plugin-crossplane-resources-frontend';
 
 import {
@@ -147,13 +151,11 @@ const overviewContent = (
     <Grid item md={8} xs={12}>
       <EntityHasSubcomponentsCard variant="gridItem" />
     </Grid>
-    <EntitySwitch>
-      <EntitySwitch.Case if={isCrossplaneAvailable}>
-        <Grid item md={6}>
-          <CrossplaneOverviewCard />
-        </Grid>
-      </EntitySwitch.Case>
-    </EntitySwitch>
+    <IfCrossplaneOverviewAvailable>
+      <Grid item md={6}>
+        <CrossplaneOverviewCardSelector />
+      </Grid>
+    </IfCrossplaneOverviewAvailable>
     <EntitySwitch>
       <EntitySwitch.Case if={isGithubActionsAvailable}>
         <Grid item sm={6}>
@@ -183,19 +185,18 @@ const serviceEntityPage = (
     </EntityLayout.Route>
 
     <EntityLayout.Route
-      path="/crossplane"
-      title="Crossplane"
-      if={isCrossplaneAvailable}
+      path="/crossplane-resources"
+      title="Crossplane Resources"
     >
-      <CrossplaneAllResourcesTable />
+      <IfCrossplaneResourcesListAvailable>
+        <CrossplaneResourcesTableSelector />
+      </IfCrossplaneResourcesListAvailable>
     </EntityLayout.Route>
 
-    <EntityLayout.Route
-      path="/crossplane-graph"
-      title="Resource Graph"
-      if={isCrossplaneAvailable}
-    >
-      <CrossplaneResourceGraph />
+    <EntityLayout.Route path="/crossplane-graph" title="Crossplane Graph">
+      <IfCrossplaneResourceGraphAvailable>
+        <CrossplaneResourceGraphSelector />
+      </IfCrossplaneResourceGraphAvailable>
     </EntityLayout.Route>
 
     <EntityLayout.Route path="/api" title="API">
@@ -433,6 +434,67 @@ const domainPage = (
   </EntityLayout>
 );
 
+const crossplaneOverviewContent = (
+  <Grid container spacing={3} alignItems="stretch">
+    {entityWarningContent}
+    <Grid item md={6}>
+      <EntityAboutCard variant="gridItem" />
+    </Grid>
+    <IfCrossplaneOverviewAvailable>
+      <Grid item md={6}>
+        <CrossplaneOverviewCardSelector />
+      </Grid>
+    </IfCrossplaneOverviewAvailable>
+    <Grid item md={4} xs={12}>
+      <EntityLinksCard />
+    </Grid>
+    <Grid item md={8} xs={12}>
+      <EntityHasSubcomponentsCard variant="gridItem" />
+    </Grid>
+  </Grid>
+);
+
+const CrossplaneEntityPage = () => {
+  const isResourcesListAvailable = useResourcesListAvailable();
+  const isResourceGraphAvailable = useResourceGraphAvailable();
+
+  return (
+    <EntityLayout>
+      <EntityLayout.Route path="/" title="Overview">
+        {crossplaneOverviewContent}
+      </EntityLayout.Route>
+
+      <EntityLayout.Route
+        if={isResourcesListAvailable}
+        path="/crossplane-resources"
+        title="Crossplane Resources"
+      >
+        <IfCrossplaneResourcesListAvailable>
+          <CrossplaneResourcesTableSelector />
+        </IfCrossplaneResourcesListAvailable>
+      </EntityLayout.Route>
+
+      <EntityLayout.Route
+        if={isResourceGraphAvailable}
+        path="/crossplane-graph"
+        title="Crossplane Graph"
+      >
+        <IfCrossplaneResourceGraphAvailable>
+          <CrossplaneResourceGraphSelector />
+        </IfCrossplaneResourceGraphAvailable>
+      </EntityLayout.Route>
+
+      <EntityLayout.Route
+        path="/kubernetes"
+        title="Kubernetes"
+        if={isKubernetesAvailable}
+      >
+        <EntityKubernetesContent />
+      </EntityLayout.Route>
+    </EntityLayout>
+  );
+};
+
 export const entityPage = (
   <EntitySwitch>
     <EntitySwitch.Case if={isKind('component')} children={componentPage} />
@@ -441,6 +503,13 @@ export const entityPage = (
     <EntitySwitch.Case if={isKind('user')} children={userPage} />
     <EntitySwitch.Case if={isKind('system')} children={systemPage} />
     <EntitySwitch.Case if={isKind('domain')} children={domainPage} />
+
+    <EntitySwitch.Case if={isComponentType('crossplane-claim')}>
+      <CrossplaneEntityPage />
+    </EntitySwitch.Case>
+    <EntitySwitch.Case if={isComponentType('crossplane-xr')}>
+      <CrossplaneEntityPage />
+    </EntitySwitch.Case>
 
     <EntitySwitch.Case>{defaultEntityPage}</EntitySwitch.Case>
   </EntitySwitch>

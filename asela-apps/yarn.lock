@@ -13334,9 +13334,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@terasky/backstage-plugin-crossplane-resources-frontend@npm:^1.9.1":
-  version: 1.9.1
-  resolution: "@terasky/backstage-plugin-crossplane-resources-frontend@npm:1.9.1"
+"@terasky/backstage-plugin-crossplane-permissions-backend@npm:^1.1.15":
+  version: 1.1.15
+  resolution: "@terasky/backstage-plugin-crossplane-permissions-backend@npm:1.1.15"
+  dependencies:
+    "@backstage/backend-defaults": "npm:^0.11.0"
+    "@backstage/backend-plugin-api": "npm:^1.4.0"
+    "@backstage/config": "npm:^1.3.2"
+    "@backstage/plugin-permission-node": "npm:^0.10.1"
+    "@terasky/backstage-plugin-crossplane-common": "npm:^1.1.11"
+    "@types/express": "npm:^4.17.22"
+    express: "npm:^4.17.1"
+    express-promise-router: "npm:^4.1.1"
+    node-fetch: "npm:^2.7.0"
+    winston: "npm:^3.2.1"
+    yn: "npm:^4.0.0"
+  checksum: 10c0/603557453aa60d3bb803a1b51af3ad26ee1997fdf85dd2fb1442ee044dc7d3bd441d3f12971aa5fd2c038a2a55956521750dc9b5b425ab1ad20788aac8592c6d
+  languageName: node
+  linkType: hard
+
+"@terasky/backstage-plugin-crossplane-resources-frontend@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@terasky/backstage-plugin-crossplane-resources-frontend@npm:2.0.0"
   dependencies:
     "@backstage/catalog-model": "npm:^1.7.4"
     "@backstage/core-components": "npm:^0.17.3"
@@ -13363,7 +13382,7 @@ __metadata:
     react-use: "npm:^17.6.0"
   peerDependencies:
     react: ^16.13.1 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/9c9971438e4b3f80b11b114375cb52256ffda28996e10404995a864db7d6b7aa077044d523c39a4dba9fa1ae801671815c5835ced4f265c90e6d71ddb92017ed
+  checksum: 10c0/3d21d1fd6cb8145ee4de1998af78e382a9e725cb6034a2dae06427eb04e78c1d8e8ac1b88ba0b78f5080b2d098f66cc05033a23b664172ea4cb852acf9d56ddc
   languageName: node
   linkType: hard
 
@@ -13391,6 +13410,18 @@ __metadata:
     node-fetch: "npm:^2.7.0"
     pluralize: "npm:^8.0.0"
   checksum: 10c0/4800fed15c363561b0986645e8cd899e907da82cb15491698409dcba0e1dfb4eb8db52c25025ac41ce87cdf45efb6fa0b45b90d758298f774245002998a13943
+  languageName: node
+  linkType: hard
+
+"@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils@npm:^1.7.0":
+  version: 1.7.0
+  resolution: "@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils@npm:1.7.0"
+  dependencies:
+    "@backstage/backend-plugin-api": "npm:^1.4.0"
+    "@backstage/plugin-scaffolder-node": "npm:^0.9.0"
+    fs-extra: "npm:^10.0.0"
+    js-yaml: "npm:^4.1.0"
+  checksum: 10c0/ac3e9c6c81def2f0dda102df392254c42901bf20ccd5334532f2e14d652f5f74361fef7fbedfc32521750b1a2c2ac9d3de10fd4380114c364b98e2ff255dc179
   languageName: node
   linkType: hard
 
@@ -14087,7 +14118,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/express@npm:^4.17.21, @types/express@npm:^4.17.6":
+"@types/express@npm:^4.17.21, @types/express@npm:^4.17.22, @types/express@npm:^4.17.6":
   version: 4.17.23
   resolution: "@types/express@npm:4.17.23"
   dependencies:
@@ -15626,7 +15657,7 @@ __metadata:
     "@material-ui/core": "npm:^4.12.2"
     "@material-ui/icons": "npm:^4.9.1"
     "@playwright/test": "npm:^1.32.3"
-    "@terasky/backstage-plugin-crossplane-resources-frontend": "npm:^1.9.1"
+    "@terasky/backstage-plugin-crossplane-resources-frontend": "npm:^2.0.0"
     "@testing-library/dom": "npm:^9.0.0"
     "@testing-library/jest-dom": "npm:^6.0.0"
     "@testing-library/react": "npm:^14.0.0"
@@ -16285,14 +16316,18 @@ __metadata:
     "@backstage/plugin-permission-node": "npm:^0.10.1"
     "@backstage/plugin-proxy-backend": "npm:^0.6.3"
     "@backstage/plugin-scaffolder-backend": "npm:^2.0.0"
+    "@backstage/plugin-scaffolder-backend-module-bitbucket": "npm:^0.3.11"
     "@backstage/plugin-scaffolder-backend-module-github": "npm:^0.8.0"
+    "@backstage/plugin-scaffolder-backend-module-gitlab": "npm:^0.9.2"
     "@backstage/plugin-search-backend": "npm:^2.0.3"
     "@backstage/plugin-search-backend-module-catalog": "npm:^0.3.5"
     "@backstage/plugin-search-backend-module-pg": "npm:^0.5.45"
     "@backstage/plugin-search-backend-module-techdocs": "npm:^0.4.3"
     "@backstage/plugin-search-backend-node": "npm:^1.3.12"
     "@backstage/plugin-techdocs-backend": "npm:^2.0.3"
+    "@terasky/backstage-plugin-crossplane-permissions-backend": "npm:^1.1.15"
     "@terasky/backstage-plugin-kubernetes-ingestor": "npm:^1.17.0"
+    "@terasky/backstage-plugin-scaffolder-backend-module-terasky-utils": "npm:^1.7.0"
     app: "link:../app"
     better-sqlite3: "npm:^9.0.0"
     node-gyp: "npm:^10.0.0"

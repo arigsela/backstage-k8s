@@ -1,11 +1,13 @@
 # Kubernetes Ingestor Configuration Changes
 
 ## Summary
+
 This branch contains the necessary changes to enable the TeraSky kubernetes-ingestor plugin to automatically discover and catalog Kubernetes resources in Backstage.
 
 ## Key Changes Made
 
 ### 1. app-config.yaml
+
 - **Moved kubernetes-ingestor configuration to root level** (was incorrectly placed under `catalog.providers`)
 - **Fixed authentication configuration** for kubectl proxy:
   - Changed from `authProvider: 'localKubectlProxy'` to `authProvider: 'serviceAccount'`
@@ -16,6 +18,7 @@ This branch contains the necessary changes to enable the TeraSky kubernetes-inge
 - **Added complete ingestor configuration** with mappings, components, and Crossplane settings
 
 ### 2. test-k8s-deployment-corrected.yaml
+
 - Created a test deployment with proper TeraSky annotations for testing
 - Includes namespace, deployment, service, and configmap resources
 - All resources have the required `terasky.backstage.io/*` annotations
@@ -23,23 +26,28 @@ This branch contains the necessary changes to enable the TeraSky kubernetes-inge
 ## Configuration Details
 
 The kubernetes-ingestor is now configured to:
+
 - Run every 60 seconds (instead of default 10 minutes)
-- Ingest all workloads (deployments, services, etc.) 
+- Ingest all workloads (deployments, services, etc.)
 - Discover resources in all namespaces except system namespaces
 - Support Crossplane claim ingestion
 - Use namespace-based naming and system mapping
 
 ## Results
+
 After these changes, the kubernetes-ingestor successfully discovered and created 38 components in the Backstage catalog from the Kubernetes cluster.
 
 ## Testing
+
 To test the configuration:
+
 1. Ensure kubectl proxy is running: `kubectl proxy`
 2. Start Backstage: `./start-with-kubectl-proxy.sh`
 3. Navigate to http://localhost:3000/catalog
 4. You should see Kubernetes resources appearing as catalog entities
 
 ## Next Steps
+
 - Review the changes
 - Consider setting `onlyAnnotated: true` if you only want to discover annotated resources
 - Adjust the frequency and timeout values based on your cluster size
