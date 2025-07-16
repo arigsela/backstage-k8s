@@ -13,7 +13,7 @@ metadata:
 spec:
   owner: platform-team
   type: resource
-  
+
   # These are the steps which are rendered in the frontend with the form input
   parameters:
     - title: Database Configuration
@@ -28,20 +28,20 @@ spec:
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
           ui:autofocus: true
           ui:help: 'This will be used as the base name for all resources'
-        
+
         namespace:
           title: Namespace
           type: string
           description: Kubernetes namespace where the database will be created
           default: default
           ui:help: 'The namespace will be created if it does not exist'
-        
+
         databaseName:
           title: Database Name
           type: string
           description: Name of the MySQL database (defaults to <appName>db)
           ui:help: 'Leave empty to use default naming convention'
-        
+
         username:
           title: Database Username
           type: string
@@ -88,10 +88,10 @@ spec:
           ui:field: OwnerPicker
           ui:options:
             catalogFilter:
-              kind: 
+              kind:
                 - Group
                 - User
-        
+
         system:
           title: System
           type: string
@@ -101,7 +101,7 @@ spec:
             catalogFilter:
               kind: System
             defaultKind: System
-        
+
         environment:
           title: Environment
           type: string
@@ -115,7 +115,7 @@ spec:
             - Development
             - Staging
             - Production
-        
+
         description:
           title: Description
           type: string
@@ -166,25 +166,25 @@ spec:
       action: publish:github:pull-request
       input:
         repoUrl: ${{ parameters.repoUrl }}
-        branchName: "crossplane-mysql-${{ parameters.appName }}"
-        title: "feat: add MySQL database for ${{ parameters.appName }}"
+        branchName: 'crossplane-mysql-${{ parameters.appName }}'
+        title: 'feat: add MySQL database for ${{ parameters.appName }}'
         update: true
         description: |
           ## Summary
           This PR adds a MySQL database configuration for **${{ parameters.appName }}** in the **${{ parameters.namespace }}** namespace.
-          
+
           ## Changes
           - 🗄️ MySQL database claim using Crossplane
           - 🔐 External Secrets configuration for Vault integration
           - 🚀 ArgoCD Application for GitOps deployment
           - 📋 Backstage catalog registration
-          
+
           ## Configuration Details
           - **Environment**: ${{ parameters.environment }}
           - **Database Name**: ${{ parameters.databaseName or parameters.appName + 'db' }}
           - **Username**: ${{ parameters.username or parameters.appName + 'user' }}
           - **Privileges**: ${{ parameters.privileges | join(', ') }}
-          
+
           Created via Backstage Software Template
 
   # Outputs are displayed to the user after a successful execution of the template
@@ -198,16 +198,16 @@ spec:
       - title: Next Steps
         content: |
           Your MySQL database claim has been created! Here's what happens next:
-          
+
           1. **Review the Pull Request** - Check the generated resources in the PR
           2. **Merge the PR** - This will trigger ArgoCD synchronization
           3. **Catalog Discovery** - The component will be automatically discovered by Backstage within 3 minutes after merging
           4. **Vault Secret** - Ensure the database password is set in Vault at path: `${{ parameters.appName }}/DB_PASSWORD`
           5. **Monitor Progress** - Watch the ArgoCD application for sync status
-          
+
           The database will be available at:
           - **Host**: mysql.${{ parameters.namespace }}.svc.cluster.local
           - **Database**: ${{ parameters.databaseName or parameters.appName + 'db' }}
           - **Username**: ${{ parameters.username or parameters.appName + 'user' }}
-          
+
           **Note**: After merging the PR, Backstage will automatically discover and register the component from the catalog-info.yaml file.

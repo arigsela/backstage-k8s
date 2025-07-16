@@ -13,7 +13,7 @@ metadata:
   annotations:
     backstage.io/kubernetes-id: ${{ values.appName }}
     backstage.io/kubernetes-namespace: ${{ values.namespace }}
-    argocd.argoproj.io/sync-wave: "100"
+    argocd.argoproj.io/sync-wave: '100'
 spec:
   project: default
   source:

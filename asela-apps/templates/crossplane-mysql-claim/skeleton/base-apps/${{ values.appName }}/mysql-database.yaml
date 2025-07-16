@@ -15,7 +15,7 @@ metadata:
     backstage.io/kubernetes-id: ${{ values.appName }}
     backstage.io/kubernetes-namespace: ${{ values.namespace }}
     # Terasky kubernetes-ingestor annotations for catalog discovery
-    terasky.backstage.io/add-to-catalog: "true"
+    terasky.backstage.io/add-to-catalog: 'true'
     terasky.backstage.io/component-type: resource
     terasky.backstage.io/description: ${{ values.description | default('MySQL database for ' + values.appName + ' application') }}
     terasky.backstage.io/lifecycle: ${{ values.environment }}
@@ -29,18 +29,18 @@ spec:
     # Database configuration
     databaseName: ${{ values.databaseName }}
     databaseNamespace: ${{ values.namespace }}
-    
+
     # User configuration
     username: ${{ values.username }}
     userNamespace: ${{ values.namespace }}
     privileges: ${{ values.privileges }}
-    
+
     # Password secret reference
     passwordSecretRef:
       name: ${{ values.appName }}-secret
       namespace: ${{ values.namespace }}
       key: DB_PASSWORD
-  
+
   # Connection secret output
   writeConnectionSecretToRef:
     name: ${{ values.appName }}-connection
