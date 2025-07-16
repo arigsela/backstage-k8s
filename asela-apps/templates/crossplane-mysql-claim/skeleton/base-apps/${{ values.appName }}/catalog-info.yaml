@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.appName }}-mysql-db
+  description: ${{ values.description | default('MySQL database for ' + values.appName) }}
+  annotations:
+    backstage.io/kubernetes-id: ${{ values.appName }}
+    backstage.io/kubernetes-namespace: ${{ values.namespace }}
+spec:
+  type: database
+  owner: ${{ values.owner }}
+  system: ${{ values.system }}
+  lifecycle: ${{ values.environment }}

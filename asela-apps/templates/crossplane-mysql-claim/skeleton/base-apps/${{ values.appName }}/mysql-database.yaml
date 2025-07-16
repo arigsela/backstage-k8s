@@ -1,0 +1,46 @@
+apiVersion: platform.io/v1alpha1
+kind: MySQLDatabase
+metadata:
+  name: ${{ values.appName }}
+  namespace: ${{ values.namespace }}
+  labels:
+    app.kubernetes.io/name: ${{ values.appName }}
+    app.kubernetes.io/instance: ${{ values.appName }}-mysql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ${{ values.appName }}
+    environment: ${{ values.environment }}
+    backstage.io/kubernetes-id: ${{ values.appName }}
+  annotations:
+    # These annotations are used by the kubernetes-ingestor to discover this resource
+    backstage.io/kubernetes-id: ${{ values.appName }}
+    backstage.io/kubernetes-namespace: ${{ values.namespace }}
+    # Terasky kubernetes-ingestor annotations for catalog discovery
+    terasky.backstage.io/add-to-catalog: "true"
+    terasky.backstage.io/component-type: resource
+    terasky.backstage.io/description: ${{ values.description | default('MySQL database for ' + values.appName + ' application') }}
+    terasky.backstage.io/lifecycle: ${{ values.environment }}
+    terasky.backstage.io/owner: ${{ values.owner }}
+    terasky.backstage.io/system: ${{ values.system }}
+    terasky.backstage.io/tags: database,mysql,crossplane,infrastructure
+spec:
+  compositionRef:
+    name: xmysqldatabase.platform.io
+  parameters:
+    # Database configuration
+    databaseName: ${{ values.databaseName }}
+    databaseNamespace: ${{ values.namespace }}
+    
+    # User configuration
+    username: ${{ values.username }}
+    userNamespace: ${{ values.namespace }}
+    privileges: ${{ values.privileges }}
+    
+    # Password secret reference
+    passwordSecretRef:
+      name: ${{ values.appName }}-secret
+      namespace: ${{ values.namespace }}
+      key: DB_PASSWORD
+  
+  # Connection secret output
+  writeConnectionSecretToRef:
+    name: ${{ values.appName }}-connection

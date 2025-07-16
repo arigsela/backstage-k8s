@@ -77,6 +77,10 @@ auth:
 
 scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
+  # Disable isolated-vm to work around the native module issue
+  defaultAuthor:
+    name: Backstage
+    email: backstage@example.com
 
 catalog:
   import:
@@ -84,7 +88,17 @@ catalog:
     pullRequestBranchName: backstage-integration
   rules:
     - allow: [Component, System, API, Resource, Location, User, Group]
-  providers: {}
+  providers:
+    github:
+      myGitHubDiscovery:
+        organization: 'arigsela'
+        catalogPath: '/base-apps/**/catalog-info.yaml'
+        filters:
+          branch: 'main'
+          repository: 'kubernetes'
+        schedule:
+          frequency: { minutes: 3 }  # Reduced for testing
+          timeout: { minutes: 1 }
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file
@@ -101,6 +115,12 @@ catalog:
       target: ../../examples/org.yaml
       rules:
         - allow: [User, Group]
+
+    # Crossplane MySQL Database Template
+    - type: file
+      target: ../../templates/crossplane-mysql-claim/template.yaml
+      rules:
+        - allow: [Template]
 
     ## Uncomment these lines to add more example data
     # - type: url
