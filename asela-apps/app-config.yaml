@@ -97,7 +97,7 @@ catalog:
           branch: 'main'
           repository: 'kubernetes'
         schedule:
-          frequency: { minutes: 3 }  # Reduced for testing
+          frequency: { minutes: 3 } # Reduced for testing
           timeout: { minutes: 1 }
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
