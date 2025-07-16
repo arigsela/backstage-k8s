@@ -1,0 +1,213 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: crossplane-mysql-database
+  title: MySQL Database (Crossplane)
+  description: Create a MySQL database using Crossplane with GitOps workflow
+  tags:
+    - recommended
+    - mysql
+    - database
+    - crossplane
+    - gitops
+spec:
+  owner: platform-team
+  type: resource
+
+  # These are the steps which are rendered in the frontend with the form input
+  parameters:
+    - title: Database Configuration
+      required:
+        - appName
+        - namespace
+      properties:
+        appName:
+          title: Application Name
+          type: string
+          description: Unique name for your application (lowercase, alphanumeric and hyphens only)
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:autofocus: true
+          ui:help: 'This will be used as the base name for all resources'
+
+        namespace:
+          title: Namespace
+          type: string
+          description: Kubernetes namespace where the database will be created
+          default: default
+          ui:help: 'The namespace will be created if it does not exist'
+
+        databaseName:
+          title: Database Name
+          type: string
+          description: Name of the MySQL database (defaults to <appName>db)
+          ui:help: 'Leave empty to use default naming convention'
+
+        username:
+          title: Database Username
+          type: string
+          description: Username for database access (defaults to <appName>user)
+          ui:help: 'Leave empty to use default naming convention'
+
+    - title: Access Privileges
+      required:
+        - privileges
+      properties:
+        privileges:
+          title: Database Privileges
+          type: array
+          description: Select the privileges for the database user
+          uniqueItems: true
+          ui:widget: checkboxes
+          items:
+            type: string
+            enum:
+              - SELECT
+              - INSERT
+              - UPDATE
+              - DELETE
+              - CREATE
+              - DROP
+              - INDEX
+              - ALTER
+          default:
+            - SELECT
+            - INSERT
+            - UPDATE
+            - DELETE
+
+    - title: Project Information
+      required:
+        - owner
+        - system
+        - environment
+      properties:
+        owner:
+          title: Owner
+          type: string
+          description: Owner of this database
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind:
+                - Group
+                - User
+
+        system:
+          title: System
+          type: string
+          description: System this database belongs to
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+            defaultKind: System
+
+        environment:
+          title: Environment
+          type: string
+          description: Deployment environment
+          default: development
+          enum:
+            - development
+            - staging
+            - production
+          enumNames:
+            - Development
+            - Staging
+            - Production
+
+        description:
+          title: Description
+          type: string
+          description: Brief description of the database purpose
+          ui:widget: textarea
+          ui:options:
+            rows: 3
+
+    - title: GitOps Configuration
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          default: 'github.com?owner=arigsela&repo=kubernetes'
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - arigsela
+            allowedRepos:
+              - kubernetes
+
+  # These are the steps that are executed in the scaffolder backend
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          appName: ${{ parameters.appName }}
+          namespace: ${{ parameters.namespace }}
+          databaseName: ${{ parameters.databaseName or parameters.appName + 'db' }}
+          username: ${{ parameters.username or parameters.appName + 'user' }}
+          privileges: ${{ parameters.privileges | dump }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          environment: ${{ parameters.environment }}
+          description: ${{ parameters.description }}
+          timestamp: ${{ Date.now() }}
+          backstageUrl: ${{ env.BACKSTAGE_URL | default('https://backstage.io') }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github:pull-request
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        branchName: 'crossplane-mysql-${{ parameters.appName }}'
+        title: 'feat: add MySQL database for ${{ parameters.appName }}'
+        update: true
+        description: |
+          ## Summary
+          This PR adds a MySQL database configuration for **${{ parameters.appName }}** in the **${{ parameters.namespace }}** namespace.
+
+          ## Changes
+          - 🗄️ MySQL database claim using Crossplane
+          - 🔐 External Secrets configuration for Vault integration
+          - 🚀 ArgoCD Application for GitOps deployment
+          - 📋 Backstage catalog registration
+
+          ## Configuration Details
+          - **Environment**: ${{ parameters.environment }}
+          - **Database Name**: ${{ parameters.databaseName or parameters.appName + 'db' }}
+          - **Username**: ${{ parameters.username or parameters.appName + 'user' }}
+          - **Privileges**: ${{ parameters.privileges | join(', ') }}
+
+          Created via Backstage Software Template
+
+  # Outputs are displayed to the user after a successful execution of the template
+  output:
+    links:
+      - title: Pull Request
+        url: ${{ steps['publish'].output.pullRequestUrl }}
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+    text:
+      - title: Next Steps
+        content: |
+          Your MySQL database claim has been created! Here's what happens next:
+
+          1. **Review the Pull Request** - Check the generated resources in the PR
+          2. **Merge the PR** - This will trigger ArgoCD synchronization
+          3. **Catalog Discovery** - The component will be automatically discovered by Backstage within 3 minutes after merging
+          4. **Vault Secret** - Ensure the database password is set in Vault at path: `${{ parameters.appName }}/DB_PASSWORD`
+          5. **Monitor Progress** - Watch the ArgoCD application for sync status
+
+          The database will be available at:
+          - **Host**: mysql.${{ parameters.namespace }}.svc.cluster.local
+          - **Database**: ${{ parameters.databaseName or parameters.appName + 'db' }}
+          - **Username**: ${{ parameters.username or parameters.appName + 'user' }}
+
+          **Note**: After merging the PR, Backstage will automatically discover and register the component from the catalog-info.yaml file.

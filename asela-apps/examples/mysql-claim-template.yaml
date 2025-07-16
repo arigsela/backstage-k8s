@@ -1,0 +1,76 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: mysql-database-claim
+  title: MySQL Database Claim
+  description: Create a new MySQL database claim using Crossplane
+  tags:
+    - crossplane
+    - mysql
+    - database
+spec:
+  owner: platform-team
+  type: resource
+  parameters:
+    - title: Database Configuration
+      required:
+        - name
+        - namespace
+      properties:
+        name:
+          title: Database Name
+          type: string
+          description: Name for your MySQL database claim
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+        namespace:
+          title: Namespace
+          type: string
+          description: Kubernetes namespace for the claim
+          default: default
+        size:
+          title: Database Size
+          type: string
+          description: Size of the database
+          default: small
+          enum:
+            - small
+            - medium
+            - large
+          enumNames:
+            - 'Small (1GB)'
+            - 'Medium (5GB)'
+            - 'Large (10GB)'
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: ./content
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          size: ${{ parameters.size }}
+
+    - id: publish
+      name: Create MySQL Claim
+      action: catalog:write
+      input:
+        filePath: mysql-claim.yaml
+        entity:
+          apiVersion: platform.io/v1alpha1
+          kind: MySQLDatabase
+          metadata:
+            name: ${{ parameters.name }}
+            namespace: ${{ parameters.namespace }}
+          spec:
+            compositionSelector:
+              matchLabels:
+                provider: aws
+                size: ${{ parameters.size }}
+            parameters:
+              storageGB: |
+                ${{ parameters.size === 'small' && 1 || parameters.size === 'medium' && 5 || 10 }}
+  output:
+    links:
+      - title: View in Catalog
+        url: ${{ steps.publish.output.entityRef }}

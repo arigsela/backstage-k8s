@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Use Node 18 which works with the current setup
-# Even though package.json specifies 20||22, Node 18 works fine for development
-export PATH="/Users/arisela/.nvm/versions/node/v18.20.6/bin:$PATH"
+# Use Node 20 to match package.json requirements and avoid native module issues
+export PATH="/Users/arisela/.nvm/versions/node/v20.19.3/bin:$PATH"
+export NODE_OPTIONS="--no-node-snapshot"
 
 # Load environment variables from .env file if it exists
 if [ -f .env ]; then
