@@ -9,7 +9,7 @@ metadata:
     backstage.io/kubernetes-id: ${{ values.appName }}
   annotations:
     backstage.io/kubernetes-id: ${{ values.appName }}
-    terasky.backstage.io/add-to-catalog: "true"
+    terasky.backstage.io/add-to-catalog: 'true'
 data:
   catalog-info.yaml: |
     apiVersion: backstage.io/v1alpha1

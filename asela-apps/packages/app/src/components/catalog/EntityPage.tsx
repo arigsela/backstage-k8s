@@ -58,16 +58,17 @@ import {
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
 
-import {
-  CrossplaneResourcesTableSelector,
-  CrossplaneOverviewCardSelector,
-  CrossplaneResourceGraphSelector,
-  useResourceGraphAvailable,
-  useResourcesListAvailable,
-  IfCrossplaneOverviewAvailable,
-  IfCrossplaneResourceGraphAvailable,
-  IfCrossplaneResourcesListAvailable,
-} from '@terasky/backstage-plugin-crossplane-resources-frontend';
+// Crossplane imports commented out due to compatibility issues
+// import {
+//   CrossplaneResourcesTableSelector,
+//   CrossplaneOverviewCardSelector,
+//   CrossplaneResourceGraphSelector,
+//   useResourceGraphAvailable,
+//   useResourcesListAvailable,
+//   IfCrossplaneOverviewAvailable,
+//   IfCrossplaneResourceGraphAvailable,
+//   IfCrossplaneResourcesListAvailable,
+// } from '@terasky/backstage-plugin-crossplane-resources-frontend';
 
 import {
   EntityGithubActionsContent,
@@ -455,8 +456,9 @@ const crossplaneOverviewContent = (
 );
 
 const CrossplaneEntityPage = () => {
-  const isResourcesListAvailable = useResourcesListAvailable();
-  const isResourceGraphAvailable = useResourceGraphAvailable();
+  // Crossplane hooks commented out due to compatibility issues
+  // const isResourcesListAvailable = useResourcesListAvailable();
+  // const isResourceGraphAvailable = useResourceGraphAvailable();
 
   return (
     <EntityLayout>
