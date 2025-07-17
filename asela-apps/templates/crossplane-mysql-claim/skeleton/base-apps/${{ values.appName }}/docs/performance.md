@@ -10,14 +10,14 @@ This guide provides performance optimization recommendations for your **${{ valu
 
 Monitor these metrics in your [Grafana Dashboard](${{ values.grafanaUrl }}/d/mysql-overview/mysql-database-overview?var-database=${{ values.databaseName }}&var-namespace=${{ values.namespace }}):
 
-| Metric | Good | Warning | Critical |
-|--------|------|---------|----------|
-| **Query Response Time** | < 100ms | 100ms - 1s | > 1s |
-| **Queries Per Second** | Varies | - | > 80% capacity |
-| **Connection Usage** | < 70% | 70-85% | > 85% |
-| **Buffer Pool Hit Ratio** | > 99% | 95-99% | < 95% |
-| **Disk I/O Wait** | < 10% | 10-20% | > 20% |
-| **Lock Wait Time** | < 1ms | 1-10ms | > 10ms |
+| Metric                    | Good    | Warning    | Critical       |
+| ------------------------- | ------- | ---------- | -------------- |
+| **Query Response Time**   | < 100ms | 100ms - 1s | > 1s           |
+| **Queries Per Second**    | Varies  | -          | > 80% capacity |
+| **Connection Usage**      | < 70%   | 70-85%     | > 85%          |
+| **Buffer Pool Hit Ratio** | > 99%   | 95-99%     | < 95%          |
+| **Disk I/O Wait**         | < 10%   | 10-20%     | > 20%          |
+| **Lock Wait Time**        | < 1ms   | 1-10ms     | > 10ms         |
 
 ### Performance Schema Queries
 
@@ -25,15 +25,15 @@ Monitor these metrics in your [Grafana Dashboard](${{ values.grafanaUrl }}/d/mys
 
 ```sql
 -- Most time-consuming queries
-SELECT 
+SELECT
     DIGEST_TEXT as query,
     COUNT_STAR as exec_count,
     ROUND(AVG_TIMER_WAIT/1000000000, 3) as avg_exec_time_sec,
     ROUND(SUM_TIMER_WAIT/1000000000, 3) as total_exec_time_sec,
     ROUND(AVG_ROWS_EXAMINED, 0) as avg_rows_examined
-FROM performance_schema.events_statements_summary_by_digest 
+FROM performance_schema.events_statements_summary_by_digest
 WHERE SCHEMA_NAME = '${{ values.databaseName }}'
-ORDER BY SUM_TIMER_WAIT DESC 
+ORDER BY SUM_TIMER_WAIT DESC
 LIMIT 10;
 ```
 
@@ -41,7 +41,7 @@ LIMIT 10;
 
 ```sql
 -- Tables with highest I/O
-SELECT 
+SELECT
     OBJECT_SCHEMA,
     OBJECT_NAME,
     COUNT_READ,
@@ -58,7 +58,7 @@ LIMIT 10;
 
 ```sql
 -- Unused indexes
-SELECT 
+SELECT
     OBJECT_SCHEMA,
     OBJECT_NAME,
     INDEX_NAME
@@ -119,7 +119,7 @@ SHOW VARIABLES LIKE 'query_cache%';
 
 ```sql
 -- Queries with full table scans
-SELECT 
+SELECT
     OBJECT_SCHEMA,
     OBJECT_NAME,
     COUNT_READ as full_scans
@@ -133,7 +133,7 @@ ORDER BY COUNT_READ DESC;
 
 ```sql
 -- Find potentially duplicate indexes
-SELECT 
+SELECT
     TABLE_SCHEMA,
     TABLE_NAME,
     GROUP_CONCAT(INDEX_NAME) as indexes,
@@ -147,33 +147,34 @@ HAVING COUNT(*) > 1;
 ### Index Recommendations
 
 === "E-commerce Schema"
-    ```sql
-    -- Product search
-    CREATE INDEX idx_products_category_price ON products(category_id, price);
-    CREATE INDEX idx_products_name_fulltext ON products(name) USING FULLTEXT;
-    
+
+````sql
+-- Product search
+CREATE INDEX idx_products_category_price ON products(category_id, price);
+CREATE INDEX idx_products_name_fulltext ON products(name) USING FULLTEXT;
+
     -- Order queries
     CREATE INDEX idx_orders_user_date ON orders(user_id, created_at);
     CREATE INDEX idx_orders_status_date ON orders(status, created_at);
     ```
 
 === "User Management"
-    ```sql
-    -- User lookups
-    CREATE UNIQUE INDEX idx_users_email ON users(email);
-    CREATE INDEX idx_users_active_created ON users(active, created_at);
-    
+```sql
+-- User lookups
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_active_created ON users(active, created_at);
+
     -- Session management
     CREATE INDEX idx_sessions_user_expires ON sessions(user_id, expires_at);
     CREATE INDEX idx_sessions_token ON sessions(token);
     ```
 
 === "Analytics Schema"
-    ```sql
-    -- Time-series data
-    CREATE INDEX idx_events_time_type ON events(timestamp, event_type);
-    CREATE INDEX idx_events_user_time ON events(user_id, timestamp);
-    
+```sql
+-- Time-series data
+CREATE INDEX idx_events_time_type ON events(timestamp, event_type);
+CREATE INDEX idx_events_user_time ON events(user_id, timestamp);
+
     -- Aggregation queries
     CREATE INDEX idx_daily_stats_date ON daily_stats(date);
     ```
@@ -194,7 +195,7 @@ HAVING COUNT(*) > 1;
 
 ```sql
 -- Analyze query execution plan
-EXPLAIN FORMAT=JSON 
+EXPLAIN FORMAT=JSON
 SELECT u.name, COUNT(o.id) as order_count
 FROM users u
 LEFT JOIN orders o ON u.id = o.user_id
@@ -202,27 +203,27 @@ WHERE u.active = 1
 GROUP BY u.id
 ORDER BY order_count DESC
 LIMIT 10;
-```
+````
 
 #### Query Rewriting Examples
 
 === "Inefficient Query"
-    ```sql
+`sql
     -- Slow: Using function in WHERE clause
     SELECT * FROM orders 
     WHERE DATE(created_at) = '2024-01-15';
-    ```
+    `
 
 === "Optimized Query"
-    ```sql
+`sql
     -- Fast: Using range query
     SELECT * FROM orders 
     WHERE created_at >= '2024-01-15 00:00:00' 
       AND created_at < '2024-01-16 00:00:00';
-    ```
+    `
 
 === "Inefficient Subquery"
-    ```sql
+`sql
     -- Slow: Correlated subquery
     SELECT * FROM products p
     WHERE price > (
@@ -230,10 +231,10 @@ LIMIT 10;
         FROM products p2 
         WHERE p2.category_id = p.category_id
     );
-    ```
+    `
 
 === "Optimized JOIN"
-    ```sql
+`sql
     -- Fast: JOIN with window function
     SELECT p.*
     FROM products p
@@ -243,7 +244,7 @@ LIMIT 10;
         GROUP BY category_id
     ) cat_avg ON p.category_id = cat_avg.category_id
     WHERE p.price > cat_avg.avg_price;
-    ```
+    `
 
 ## Application-Level Optimization
 
@@ -252,10 +253,11 @@ LIMIT 10;
 Configure connection pooling in your applications:
 
 === "Python (SQLAlchemy)"
-    ```python
-    from sqlalchemy import create_engine
-    from sqlalchemy.pool import QueuePool
-    
+
+````python
+from sqlalchemy import create_engine
+from sqlalchemy.pool import QueuePool
+
     engine = create_engine(
         'mysql+pymysql://user:pass@host/db',
         poolclass=QueuePool,
@@ -267,25 +269,25 @@ Configure connection pooling in your applications:
     ```
 
 === "Java (HikariCP)"
-    ```java
-    HikariConfig config = new HikariConfig();
-    config.setJdbcUrl("jdbc:mysql://host:3306/db");
-    config.setUsername("user");
-    config.setPassword("pass");
-    config.setMaximumPoolSize(20);        // Maximum pool size
-    config.setMinimumIdle(5);             // Minimum idle connections
-    config.setConnectionTimeout(30000);   // 30 seconds
-    config.setIdleTimeout(600000);        // 10 minutes
-    config.setMaxLifetime(1800000);       // 30 minutes
-    config.setLeakDetectionThreshold(60000); // 1 minute
-    
+```java
+HikariConfig config = new HikariConfig();
+config.setJdbcUrl("jdbc:mysql://host:3306/db");
+config.setUsername("user");
+config.setPassword("pass");
+config.setMaximumPoolSize(20); // Maximum pool size
+config.setMinimumIdle(5); // Minimum idle connections
+config.setConnectionTimeout(30000); // 30 seconds
+config.setIdleTimeout(600000); // 10 minutes
+config.setMaxLifetime(1800000); // 30 minutes
+config.setLeakDetectionThreshold(60000); // 1 minute
+
     HikariDataSource dataSource = new HikariDataSource(config);
     ```
 
 === "Node.js (mysql2)"
-    ```javascript
-    const mysql = require('mysql2');
-    
+```javascript
+const mysql = require('mysql2');
+
     const pool = mysql.createPool({
         host: 'mysql.namespace.svc.cluster.local',
         user: 'username',
@@ -297,7 +299,7 @@ Configure connection pooling in your applications:
         reconnect: true,          // Automatic reconnection
         ssl: { rejectUnauthorized: true }
     });
-    
+
     // Use promises
     const promisePool = pool.promise();
     ```
@@ -307,44 +309,44 @@ Configure connection pooling in your applications:
 #### Application-Level Caching
 
 === "Redis Caching"
-    ```python
-    import redis
-    import json
-    from datetime import timedelta
-    
+```python
+import redis
+import json
+from datetime import timedelta
+
     redis_client = redis.Redis(host='redis', port=6379, db=0)
-    
+
     def get_user_with_cache(user_id):
         cache_key = f"user:{user_id}"
-        
+
         # Try cache first
         cached = redis_client.get(cache_key)
         if cached:
             return json.loads(cached)
-        
+
         # Query database
         user = query_database(user_id)
-        
+
         # Cache for 1 hour
         redis_client.setex(
-            cache_key, 
-            timedelta(hours=1), 
+            cache_key,
+            timedelta(hours=1),
             json.dumps(user)
         )
-        
+
         return user
     ```
 
 === "Application Cache"
-    ```java
-    @Service
-    public class UserService {
-        
+```java
+@Service
+public class UserService {
+
         @Cacheable(value = "users", key = "#userId")
         public User getUserById(Long userId) {
             return userRepository.findById(userId);
         }
-        
+
         @CacheEvict(value = "users", key = "#user.id")
         public User updateUser(User user) {
             return userRepository.save(user);
@@ -358,7 +360,7 @@ Configure connection pooling in your applications:
 
 ```sql
 -- Instead of multiple single inserts
-INSERT INTO products (name, price, category_id) VALUES 
+INSERT INTO products (name, price, category_id) VALUES
     ('Product 1', 19.99, 1),
     ('Product 2', 29.99, 1),
     ('Product 3', 39.99, 2),
@@ -367,19 +369,19 @@ INSERT INTO products (name, price, category_id) VALUES
 
 -- Use transactions for consistency
 START TRANSACTION;
-INSERT INTO products (name, price, category_id) VALUES 
+INSERT INTO products (name, price, category_id) VALUES
     ('Product 1', 19.99, 1),
     ('Product 2', 29.99, 1);
 -- ... more inserts
 COMMIT;
-```
+````
 
 #### Bulk Updates
 
 ```sql
 -- Use CASE statements for bulk updates
-UPDATE products 
-SET price = CASE 
+UPDATE products
+SET price = CASE
     WHEN id = 1 THEN 19.99
     WHEN id = 2 THEN 29.99
     WHEN id = 3 THEN 39.99
@@ -457,7 +459,7 @@ Generate weekly performance reports:
 
 ```sql
 -- Weekly query performance summary
-SELECT 
+SELECT
     DATE(FROM_UNIXTIME(FIRST_SEEN)) as week_start,
     COUNT_STAR as total_executions,
     ROUND(AVG_TIMER_WAIT/1000000000, 3) as avg_execution_time,
@@ -482,8 +484,8 @@ ORDER BY week_start;
 
 ```sql
 -- Enable performance schema (MySQL 8.0)
-UPDATE performance_schema.setup_instruments 
-SET ENABLED = 'YES', TIMED = 'YES' 
+UPDATE performance_schema.setup_instruments
+SET ENABLED = 'YES', TIMED = 'YES'
 WHERE NAME LIKE '%statement%';
 
 -- Monitor current queries

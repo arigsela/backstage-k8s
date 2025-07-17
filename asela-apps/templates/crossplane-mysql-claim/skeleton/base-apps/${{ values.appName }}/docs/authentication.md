@@ -8,11 +8,11 @@ This guide covers how to set up secure authentication for your **${{ values.data
 
 ### User Details
 
-| Parameter | Value |
-|-----------|-------|
-| **Username** | `${{ values.username }}` |
-| **Authentication** | MySQL Native Password |
-| **SSL Required** | Yes |
+| Parameter          | Value                    |
+| ------------------ | ------------------------ |
+| **Username**       | `${{ values.username }}` |
+| **Authentication** | MySQL Native Password    |
+| **SSL Required**   | Yes                      |
 
 ### User Privileges
 
@@ -20,9 +20,9 @@ The database user has been configured with the following privileges:
 
 {% for privilege in values.privileges %}
 === "{{ privilege }}"
-    {% if privilege == "SELECT" %}
-    **Read Access**: Query data from tables and views
-    
+{% if privilege == "SELECT" %}
+**Read Access**: Query data from tables and views
+
     ```sql
     -- Examples of SELECT operations
     SELECT * FROM users WHERE active = 1;
@@ -30,7 +30,7 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "INSERT" %}
     **Insert Access**: Add new records to tables
-    
+
     ```sql
     -- Examples of INSERT operations
     INSERT INTO users (name, email) VALUES ('John Doe', 'john@example.com');
@@ -38,7 +38,7 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "UPDATE" %}
     **Update Access**: Modify existing records
-    
+
     ```sql
     -- Examples of UPDATE operations
     UPDATE users SET last_login = NOW() WHERE id = 1;
@@ -46,7 +46,7 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "DELETE" %}
     **Delete Access**: Remove records from tables
-    
+
     ```sql
     -- Examples of DELETE operations
     DELETE FROM sessions WHERE expires_at < NOW();
@@ -54,7 +54,7 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "CREATE" %}
     **Create Access**: Create new tables and databases
-    
+
     ```sql
     -- Examples of CREATE operations
     CREATE TABLE logs (
@@ -65,14 +65,14 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "DROP" %}
     **Drop Access**: Remove tables and databases
-    
+
     ```sql
     -- Examples of DROP operations
     DROP TABLE IF EXISTS temp_table;
     ```
     {% elif privilege == "ALTER" %}
     **Alter Access**: Modify table structure
-    
+
     ```sql
     -- Examples of ALTER operations
     ALTER TABLE users ADD COLUMN phone VARCHAR(20);
@@ -80,7 +80,7 @@ The database user has been configured with the following privileges:
     ```
     {% elif privilege == "INDEX" %}
     **Index Access**: Create and manage indexes
-    
+
     ```sql
     -- Examples of INDEX operations
     CREATE INDEX idx_user_email ON users(email);
@@ -105,7 +105,7 @@ Database passwords are managed through multiple secure systems:
 ### Password Rotation
 
 !!! warning "Password Rotation"
-    Passwords are automatically rotated every 90 days. Applications using connection pooling will reconnect automatically.
+Passwords are automatically rotated every 90 days. Applications using connection pooling will reconnect automatically.
 
 #### Manual Password Rotation
 
@@ -129,18 +129,19 @@ kubectl get externalsecret ${{ values.appName }}-secret -n ${{ values.namespace 
 
 All connections to the database **must** use SSL/TLS encryption:
 
-| Setting | Value |
-|---------|-------|
-| **SSL Mode** | Required |
-| **TLS Version** | 1.2+ |
-| **Certificate Verification** | Enabled |
+| Setting                      | Value    |
+| ---------------------------- | -------- |
+| **SSL Mode**                 | Required |
+| **TLS Version**              | 1.2+     |
+| **Certificate Verification** | Enabled  |
 
 ### Connection String Examples
 
 === "Python (PyMySQL)"
-    ```python
-    import pymysql
-    
+
+````python
+import pymysql
+
     connection = pymysql.connect(
         host='mysql.${{ values.namespace }}.svc.cluster.local',
         user='${{ values.username }}',
@@ -153,15 +154,15 @@ All connections to the database **must** use SSL/TLS encryption:
     ```
 
 === "Java (JDBC)"
-    ```java
-    String url = "jdbc:mysql://mysql.${{ values.namespace }}.svc.cluster.local:3306/${{ values.databaseName }}" +
-                 "?useSSL=true&requireSSL=true&verifyServerCertificate=true";
-    
+```java
+String url = "jdbc:mysql://mysql.${{ values.namespace }}.svc.cluster.local:3306/${{ values.databaseName }}" +
+"?useSSL=true&requireSSL=true&verifyServerCertificate=true";
+
     Connection conn = DriverManager.getConnection(url, "${{ values.username }}", password);
     ```
 
 === "Node.js (mysql2)"
-    ```javascript
+`javascript
     const connection = mysql.createConnection({
         host: 'mysql.${{ values.namespace }}.svc.cluster.local',
         user: '${{ values.username }}',
@@ -172,13 +173,13 @@ All connections to the database **must** use SSL/TLS encryption:
             minVersion: 'TLSv1.2'
         }
     });
-    ```
+    `
 
 === "Go"
-    ```go
-    dsn := fmt.Sprintf("%s:%s@tcp(mysql.${{ values.namespace }}.svc.cluster.local:3306)/${{ values.databaseName }}?tls=true&tls-skip-verify=false",
-        "${{ values.username }}", password)
-    
+```go
+dsn := fmt.Sprintf("%s:%s@tcp(mysql.${{ values.namespace }}.svc.cluster.local:3306)/${{ values.databaseName }}?tls=true&tls-skip-verify=false",
+"${{ values.username }}", password)
+
     db, err := sql.Open("mysql", dsn)
     ```
 
@@ -201,10 +202,10 @@ metadata:
   name: ${{ values.appName }}-secret-reader
   namespace: ${{ values.namespace }}
 rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  resourceNames: ["${{ values.appName }}-secret"]
-  verbs: ["get", "list"]
+  - apiGroups: ['']
+    resources: ['secrets']
+    resourceNames: ['${{ values.appName }}-secret']
+    verbs: ['get', 'list']
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -212,14 +213,14 @@ metadata:
   name: ${{ values.appName }}-secret-reader
   namespace: ${{ values.namespace }}
 subjects:
-- kind: ServiceAccount
-  name: ${{ values.appName }}-app
-  namespace: ${{ values.namespace }}
+  - kind: ServiceAccount
+    name: ${{ values.appName }}-app
+    namespace: ${{ values.namespace }}
 roleRef:
   kind: Role
   name: ${{ values.appName }}-secret-reader
   apiGroup: rbac.authorization.k8s.io
-```
+````
 
 ### Environment Variables
 
@@ -233,21 +234,21 @@ spec:
     spec:
       serviceAccountName: ${{ values.appName }}-app
       containers:
-      - name: app
-        env:
-        - name: DB_HOST
-          value: "mysql.${{ values.namespace }}.svc.cluster.local"
-        - name: DB_PORT
-          value: "3306"
-        - name: DB_NAME
-          value: "${{ values.databaseName }}"
-        - name: DB_USER
-          value: "${{ values.username }}"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ${{ values.appName }}-secret
-              key: DB_PASSWORD
+        - name: app
+          env:
+            - name: DB_HOST
+              value: 'mysql.${{ values.namespace }}.svc.cluster.local'
+            - name: DB_PORT
+              value: '3306'
+            - name: DB_NAME
+              value: '${{ values.databaseName }}'
+            - name: DB_USER
+              value: '${{ values.username }}'
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ${{ values.appName }}-secret
+                  key: DB_PASSWORD
 ```
 
 ## Vault Integration
@@ -320,6 +321,7 @@ path "secret/metadata/${{ values.appName }}" {
 ### Common Issues
 
 1. **SSL Certificate Errors**
+
    ```bash
    # Check SSL configuration
    mysql -h mysql.${{ values.namespace }}.svc.cluster.local \
@@ -329,6 +331,7 @@ path "secret/metadata/${{ values.appName }}" {
    ```
 
 2. **Permission Denied**
+
    ```bash
    # Verify password from secret
    kubectl get secret ${{ values.appName }}-secret \

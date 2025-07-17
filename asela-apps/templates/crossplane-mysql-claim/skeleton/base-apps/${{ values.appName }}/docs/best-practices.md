@@ -18,7 +18,7 @@ CREATE TABLE users (
     name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_email (email),
     INDEX idx_created_at (created_at)
 );
@@ -30,7 +30,7 @@ CREATE TABLE orders (
     status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
     INDEX idx_user_id (user_id),
     INDEX idx_status_created (status, created_at)
@@ -39,14 +39,14 @@ CREATE TABLE orders (
 
 #### Data Type Best Practices
 
-| Use Case | Recommended Type | Avoid | Reason |
-|----------|-----------------|-------|---------|
-| **Primary Keys** | `INT AUTO_INCREMENT` or `BIGINT` | `VARCHAR` | Better performance, storage |
-| **Timestamps** | `TIMESTAMP` or `DATETIME` | `VARCHAR` dates | Proper sorting, filtering |
-| **Money** | `DECIMAL(10,2)` | `FLOAT` | Precision for financial data |
-| **Boolean** | `BOOLEAN` or `TINYINT(1)` | `CHAR(1)` | Clear intent, storage efficiency |
-| **Enum Values** | `ENUM()` | `VARCHAR` for fixed sets | Constraint enforcement |
-| **Text Content** | `TEXT` | `VARCHAR(MAX)` | Appropriate for variable content |
+| Use Case         | Recommended Type                 | Avoid                    | Reason                           |
+| ---------------- | -------------------------------- | ------------------------ | -------------------------------- |
+| **Primary Keys** | `INT AUTO_INCREMENT` or `BIGINT` | `VARCHAR`                | Better performance, storage      |
+| **Timestamps**   | `TIMESTAMP` or `DATETIME`        | `VARCHAR` dates          | Proper sorting, filtering        |
+| **Money**        | `DECIMAL(10,2)`                  | `FLOAT`                  | Precision for financial data     |
+| **Boolean**      | `BOOLEAN` or `TINYINT(1)`        | `CHAR(1)`                | Clear intent, storage efficiency |
+| **Enum Values**  | `ENUM()`                         | `VARCHAR` for fixed sets | Constraint enforcement           |
+| **Text Content** | `TEXT`                           | `VARCHAR(MAX)`           | Appropriate for variable content |
 
 ### Indexing Strategy
 
@@ -74,7 +74,7 @@ UNIQUE INDEX idx_unique_email (email)
 
 ```sql
 -- Check index usage
-SELECT 
+SELECT
     TABLE_SCHEMA,
     TABLE_NAME,
     INDEX_NAME,
@@ -86,7 +86,7 @@ WHERE TABLE_SCHEMA = '${{ values.databaseName }}'
 ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX;
 
 -- Find unused indexes
-SELECT * FROM sys.schema_unused_indexes 
+SELECT * FROM sys.schema_unused_indexes
 WHERE object_schema = '${{ values.databaseName }}';
 ```
 
@@ -97,10 +97,11 @@ WHERE object_schema = '${{ values.databaseName }}';
 #### Connection Pooling Configuration
 
 === "Python (SQLAlchemy)"
-    ```python
-    from sqlalchemy import create_engine
-    from sqlalchemy.pool import QueuePool
-    
+
+````python
+from sqlalchemy import create_engine
+from sqlalchemy.pool import QueuePool
+
     # Production configuration
     engine = create_engine(
         f'mysql+pymysql://{username}:{password}@{host}/{database}',
@@ -120,12 +121,12 @@ WHERE object_schema = '${{ values.databaseName }}';
     ```
 
 === "Java (HikariCP)"
-    ```java
-    HikariConfig config = new HikariConfig();
-    config.setJdbcUrl("jdbc:mysql://host:3306/database");
-    config.setUsername(username);
-    config.setPassword(password);
-    
+```java
+HikariConfig config = new HikariConfig();
+config.setJdbcUrl("jdbc:mysql://host:3306/database");
+config.setUsername(username);
+config.setPassword(password);
+
     // Pool settings
     config.setMaximumPoolSize(25);
     config.setMinimumIdle(5);
@@ -133,45 +134,45 @@ WHERE object_schema = '${{ values.databaseName }}';
     config.setIdleTimeout(600000);         // 10 minutes
     config.setMaxLifetime(1800000);        // 30 minutes
     config.setLeakDetectionThreshold(60000); // 1 minute
-    
+
     // Performance settings
     config.addDataSourceProperty("cachePrepStmts", "true");
     config.addDataSourceProperty("prepStmtCacheSize", "250");
     config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
     config.addDataSourceProperty("useServerPrepStmts", "true");
-    
+
     HikariDataSource dataSource = new HikariDataSource(config);
     ```
 
 === "Node.js (mysql2)"
-    ```javascript
-    const mysql = require('mysql2/promise');
-    
+```javascript
+const mysql = require('mysql2/promise');
+
     const pool = mysql.createPool({
         host: 'mysql.${{ values.namespace }}.svc.cluster.local',
         user: '${{ values.username }}',
         password: process.env.DB_PASSWORD,
         database: '${{ values.databaseName }}',
-        
+
         // Pool configuration
         connectionLimit: 20,
         acquireTimeout: 60000,
         timeout: 60000,
-        
+
         // Connection settings
         ssl: { rejectUnauthorized: true },
         charset: 'utf8mb4',
         timezone: 'Z',
-        
+
         // Reconnection
         reconnect: true,
         reconnectDelay: 2000,
-        
+
         // Performance
         supportBigNumbers: true,
         bigNumberStrings: true
     });
-    
+
     module.exports = pool;
     ```
 
@@ -187,56 +188,56 @@ SELECT id, name, email FROM users WHERE active = 1;
 SELECT * FROM users WHERE active = 1;
 
 -- ✅ Good: Use indexes effectively
-SELECT * FROM orders 
-WHERE user_id = 123 AND status = 'pending' 
-ORDER BY created_at DESC 
+SELECT * FROM orders
+WHERE user_id = 123 AND status = 'pending'
+ORDER BY created_at DESC
 LIMIT 10;
 
 -- ❌ Bad: Function in WHERE clause
-SELECT * FROM orders 
+SELECT * FROM orders
 WHERE DATE(created_at) = '2024-01-15';
 
 -- ✅ Good: Range query instead
-SELECT * FROM orders 
-WHERE created_at >= '2024-01-15 00:00:00' 
+SELECT * FROM orders
+WHERE created_at >= '2024-01-15 00:00:00'
   AND created_at < '2024-01-16 00:00:00';
-```
+````
 
 #### Parameterized Queries
 
 === "Python"
-    ```python
-    # ✅ Secure: Parameterized query
-    cursor.execute(
-        "SELECT * FROM users WHERE email = %s AND active = %s",
-        (email, True)
-    )
-    
+
+````python # ✅ Secure: Parameterized query
+cursor.execute(
+"SELECT \* FROM users WHERE email = %s AND active = %s",
+(email, True)
+)
+
     # ❌ Vulnerable: String concatenation
     cursor.execute(f"SELECT * FROM users WHERE email = '{email}'")
     ```
 
 === "Java"
-    ```java
-    // ✅ Secure: PreparedStatement
-    String sql = "SELECT * FROM users WHERE email = ? AND active = ?";
-    PreparedStatement stmt = connection.prepareStatement(sql);
-    stmt.setString(1, email);
-    stmt.setBoolean(2, true);
-    ResultSet rs = stmt.executeQuery();
-    
+```java
+// ✅ Secure: PreparedStatement
+String sql = "SELECT \* FROM users WHERE email = ? AND active = ?";
+PreparedStatement stmt = connection.prepareStatement(sql);
+stmt.setString(1, email);
+stmt.setBoolean(2, true);
+ResultSet rs = stmt.executeQuery();
+
     // ❌ Vulnerable: String concatenation
     String sql = "SELECT * FROM users WHERE email = '" + email + "'";
     ```
 
 === "Node.js"
-    ```javascript
-    // ✅ Secure: Parameterized query
-    const [rows] = await pool.execute(
-        'SELECT * FROM users WHERE email = ? AND active = ?',
-        [email, true]
-    );
-    
+```javascript
+// ✅ Secure: Parameterized query
+const [rows] = await pool.execute(
+'SELECT \* FROM users WHERE email = ? AND active = ?',
+[email, true]
+);
+
     // ❌ Vulnerable: Template literal
     const sql = `SELECT * FROM users WHERE email = '${email}'`;
     ```
@@ -256,29 +257,30 @@ COMMIT;
 START TRANSACTION;
 -- ... many operations including user input ...
 COMMIT;
-```
+````
 
 #### Application Transaction Handling
 
 === "Python (SQLAlchemy)"
-    ```python
-    from sqlalchemy.orm import sessionmaker
-    
+
+````python
+from sqlalchemy.orm import sessionmaker
+
     Session = sessionmaker(bind=engine)
-    
+
     def transfer_money(from_account, to_account, amount):
         session = Session()
         try:
             # Start transaction
             from_acc = session.query(Account).filter_by(id=from_account).with_for_update().first()
             to_acc = session.query(Account).filter_by(id=to_account).with_for_update().first()
-            
+
             if from_acc.balance < amount:
                 raise ValueError("Insufficient funds")
-            
+
             from_acc.balance -= amount
             to_acc.balance += amount
-            
+
             session.commit()
             return True
         except Exception as e:
@@ -289,23 +291,23 @@ COMMIT;
     ```
 
 === "Java (Spring)"
-    ```java
-    @Service
-    @Transactional
-    public class AccountService {
-        
+```java
+@Service
+@Transactional
+public class AccountService {
+
         @Transactional(isolation = Isolation.READ_COMMITTED)
         public void transferMoney(Long fromAccount, Long toAccount, BigDecimal amount) {
             Account from = accountRepository.findByIdForUpdate(fromAccount);
             Account to = accountRepository.findByIdForUpdate(toAccount);
-            
+
             if (from.getBalance().compareTo(amount) < 0) {
                 throw new InsufficientFundsException();
             }
-            
+
             from.setBalance(from.getBalance().subtract(amount));
             to.setBalance(to.getBalance().add(amount));
-            
+
             accountRepository.save(from);
             accountRepository.save(to);
         }
@@ -320,34 +322,34 @@ COMMIT;
 
 ```sql
 -- ✅ Good: Batch insert
-INSERT INTO products (name, price, category_id) VALUES 
+INSERT INTO products (name, price, category_id) VALUES
     ('Product 1', 19.99, 1),
     ('Product 2', 29.99, 1),
     ('Product 3', 39.99, 2);
 
 -- ✅ Good: Batch update with CASE
-UPDATE products 
-SET price = CASE 
+UPDATE products
+SET price = CASE
     WHEN id = 1 THEN 19.99
     WHEN id = 2 THEN 29.99
     WHEN id = 3 THEN 39.99
     ELSE price
 END
 WHERE id IN (1, 2, 3);
-```
+````
 
 #### Pagination
 
 ```sql
 -- ✅ Good: Offset-based pagination (small offsets)
-SELECT * FROM orders 
-ORDER BY id DESC 
+SELECT * FROM orders
+ORDER BY id DESC
 LIMIT 20 OFFSET 0;
 
 -- ✅ Better: Cursor-based pagination (large datasets)
-SELECT * FROM orders 
-WHERE id < 1000 
-ORDER BY id DESC 
+SELECT * FROM orders
+WHERE id < 1000
+ORDER BY id DESC
 LIMIT 20;
 ```
 
@@ -356,51 +358,52 @@ LIMIT 20;
 #### Application-Level Caching
 
 === "Redis Caching"
-    ```python
-    import redis
-    import json
-    from datetime import timedelta
-    
+
+````python
+import redis
+import json
+from datetime import timedelta
+
     redis_client = redis.Redis(host='redis', port=6379, db=0)
-    
+
     def get_user_profile(user_id):
         cache_key = f"user_profile:{user_id}"
-        
+
         # Try cache first
         cached_data = redis_client.get(cache_key)
         if cached_data:
             return json.loads(cached_data)
-        
+
         # Query database
         user = db.query("SELECT * FROM users WHERE id = %s", (user_id,))
-        
+
         # Cache for 1 hour
         redis_client.setex(
             cache_key,
             timedelta(hours=1),
             json.dumps(user, default=str)
         )
-        
+
         return user
-    
+
     def invalidate_user_cache(user_id):
         cache_key = f"user_profile:{user_id}"
         redis_client.delete(cache_key)
     ```
 
 === "Memcached"
-    ```java
-    @Service
-    public class UserService {
-        
+```java
+@Service
+public class UserService {
+
         @Autowired
         private MemcachedClient memcachedClient;
-        
+
         @Cacheable(value = "userProfiles", key = "#userId")
         public User getUserProfile(Long userId) {
             return userRepository.findById(userId);
         }
-        
+
         @CacheEvict(value = "userProfiles", key = "#userId")
         public void updateUser(Long userId, User user) {
             userRepository.save(user);
@@ -423,12 +426,12 @@ def validate_email(email):
 def get_user_by_email(email):
     if not validate_email(email):
         raise ValueError("Invalid email format")
-    
+
     # Safe parameterized query
     query = text("SELECT * FROM users WHERE email = :email")
     result = session.execute(query, {"email": email})
     return result.fetchone()
-```
+````
 
 ### Error Handling
 
@@ -467,13 +470,13 @@ def get_database_password():
         # Load cluster config
         config.load_incluster_config()
         v1 = client.CoreV1Api()
-        
+
         # Read secret
         secret = v1.read_namespaced_secret(
             name="${{ values.appName }}-secret",
             namespace="${{ values.namespace }}"
         )
-        
+
         # Decode password
         password = base64.b64decode(secret.data['DB_PASSWORD']).decode('utf-8')
         return password
@@ -582,43 +585,43 @@ spec:
     spec:
       serviceAccountName: ${{ values.appName }}-sa
       containers:
-      - name: app
-        image: ${{ values.appName }}:latest
-        env:
-        - name: DB_HOST
-          value: "mysql.${{ values.namespace }}.svc.cluster.local"
-        - name: DB_PORT
-          value: "3306"
-        - name: DB_NAME
-          value: "${{ values.databaseName }}"
-        - name: DB_USER
-          value: "${{ values.username }}"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ${{ values.appName }}-secret
-              key: DB_PASSWORD
-        # Health checks
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        # Resource limits
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
+        - name: app
+          image: ${{ values.appName }}:latest
+          env:
+            - name: DB_HOST
+              value: 'mysql.${{ values.namespace }}.svc.cluster.local'
+            - name: DB_PORT
+              value: '3306'
+            - name: DB_NAME
+              value: '${{ values.databaseName }}'
+            - name: DB_USER
+              value: '${{ values.username }}'
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ${{ values.appName }}-secret
+                  key: DB_PASSWORD
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # Resource limits
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'
 ```
 
 ### Database Migrations
@@ -659,10 +662,10 @@ def db_session():
     engine = create_engine('mysql://test_user:test_pass@localhost/test_db')
     Session = sessionmaker(bind=engine)
     session = Session()
-    
+
     # Setup test data
     yield session
-    
+
     # Cleanup after test
     session.rollback()
     session.close()
@@ -671,7 +674,7 @@ def test_user_creation(db_session):
     user = User(name="Test User", email="test@example.com")
     db_session.add(user)
     db_session.commit()
-    
+
     assert user.id is not None
     assert user.created_at is not None
 
@@ -680,7 +683,7 @@ def test_user_query_performance(db_session):
     start_time = time.time()
     users = db_session.query(User).filter(User.active == True).limit(100).all()
     execution_time = time.time() - start_time
-    
+
     assert execution_time < 0.1  # Should complete in under 100ms
     assert len(users) <= 100
 ```
@@ -704,12 +707,12 @@ def retry_db_operation(max_retries=3, backoff_base=2):
                 except (ConnectionError, TimeoutError) as e:
                     if attempt == max_retries - 1:
                         raise e
-                    
+
                     # Exponential backoff with jitter
                     delay = backoff_base ** attempt + random.uniform(0, 1)
                     time.sleep(delay)
                     logger.warning(f"Retrying database operation, attempt {attempt + 1}")
-            
+
         return wrapper
     return decorator
 
@@ -736,14 +739,14 @@ class CircuitBreaker:
         self.failure_count = 0
         self.last_failure_time = None
         self.state = CircuitState.CLOSED
-    
+
     def call(self, func, *args, **kwargs):
         if self.state == CircuitState.OPEN:
             if time.time() - self.last_failure_time > self.timeout:
                 self.state = CircuitState.HALF_OPEN
             else:
                 raise Exception("Circuit breaker is OPEN")
-        
+
         try:
             result = func(*args, **kwargs)
             self.reset()
@@ -751,14 +754,14 @@ class CircuitBreaker:
         except Exception as e:
             self.record_failure()
             raise e
-    
+
     def record_failure(self):
         self.failure_count += 1
         self.last_failure_time = time.time()
-        
+
         if self.failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN
-    
+
     def reset(self):
         self.failure_count = 0
         self.state = CircuitState.CLOSED
@@ -778,19 +781,19 @@ def safe_db_query(query):
 def create_user_account(email: str, name: str, password: str) -> User:
     """
     Create a new user account with validation and security measures.
-    
+
     Args:
         email (str): User's email address (must be unique)
         name (str): User's full name
         password (str): Plain text password (will be hashed)
-    
+
     Returns:
         User: Created user object with generated ID
-    
+
     Raises:
         ValueError: If email format is invalid or already exists
         DatabaseError: If database operation fails
-    
+
     Example:
         >>> user = create_user_account("john@example.com", "John Doe", "secure123")
         >>> print(user.id)
@@ -811,28 +814,28 @@ def create_user_account(email: str, name: str, password: str) -> User:
 CREATE TABLE users (
     -- Primary identifier for user records
     id INT AUTO_INCREMENT PRIMARY KEY,
-    
+
     -- Unique email address for authentication
     -- Format: validated email format
     -- Constraints: UNIQUE, NOT NULL
     email VARCHAR(255) UNIQUE NOT NULL,
-    
+
     -- User's display name
     -- Constraints: NOT NULL, 1-100 characters
     name VARCHAR(100) NOT NULL,
-    
+
     -- Account status flag
     -- Default: TRUE (active account)
     active BOOLEAN DEFAULT TRUE,
-    
+
     -- Record creation timestamp
     -- Auto-populated on INSERT
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Record modification timestamp
     -- Auto-updated on UPDATE
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     -- Indexes for performance
     INDEX idx_email (email),
     INDEX idx_active_created (active, created_at)

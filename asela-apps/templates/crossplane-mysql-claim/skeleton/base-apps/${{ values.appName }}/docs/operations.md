@@ -10,11 +10,11 @@ This guide covers operational procedures for managing your **${{ values.database
 
 Your database is automatically backed up using the following schedule:
 
-| Backup Type | Frequency | Retention |
-|-------------|-----------|-----------|
-| **Full Backup** | Daily at 2:00 AM UTC | 30 days |
-| **Incremental** | Every 6 hours | 7 days |
-| **Point-in-Time** | Continuous (binlog) | 7 days |
+| Backup Type       | Frequency            | Retention |
+| ----------------- | -------------------- | --------- |
+| **Full Backup**   | Daily at 2:00 AM UTC | 30 days   |
+| **Incremental**   | Every 6 hours        | 7 days    |
+| **Point-in-Time** | Continuous (binlog)  | 7 days    |
 
 ### Manual Backup
 
@@ -44,7 +44,7 @@ kubectl exec -n ${{ values.namespace }} \
 ### Restore Operations
 
 !!! danger "Restore Warning"
-    Restore operations will overwrite existing data. Always verify the backup before proceeding.
+Restore operations will overwrite existing data. Always verify the backup before proceeding.
 
 #### Full Database Restore
 
@@ -89,9 +89,9 @@ OPTIMIZE TABLE table_name;
 
 -- Optimize all tables
 SET @sql = '';
-SELECT CONCAT('OPTIMIZE TABLE ', table_name, ';') 
-FROM information_schema.tables 
-WHERE table_schema = '${{ values.databaseName }}' 
+SELECT CONCAT('OPTIMIZE TABLE ', table_name, ';')
+FROM information_schema.tables
+WHERE table_schema = '${{ values.databaseName }}'
 INTO @sql;
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -106,9 +106,9 @@ ANALYZE TABLE table_name;
 
 -- Analyze all tables
 SET @sql = '';
-SELECT GROUP_CONCAT('ANALYZE TABLE ', table_name SEPARATOR '; ') 
-FROM information_schema.tables 
-WHERE table_schema = '${{ values.databaseName }}' 
+SELECT GROUP_CONCAT('ANALYZE TABLE ', table_name SEPARATOR '; ')
+FROM information_schema.tables
+WHERE table_schema = '${{ values.databaseName }}'
 INTO @sql;
 SET @sql = CONCAT(@sql, ';');
 PREPARE stmt FROM @sql;
@@ -130,7 +130,7 @@ WHERE TABLE_SCHEMA = '${{ values.databaseName }}'
 ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX;
 
 -- Find unused indexes (requires sys schema)
-SELECT * FROM sys.schema_unused_indexes 
+SELECT * FROM sys.schema_unused_indexes
 WHERE object_schema = '${{ values.databaseName }}';
 ```
 
@@ -140,14 +140,14 @@ WHERE object_schema = '${{ values.databaseName }}';
 
 Monitor these key metrics in [Grafana Dashboard](${{ values.grafanaUrl }}/d/mysql-overview/mysql-database-overview?var-database=${{ values.databaseName }}&var-namespace=${{ values.namespace }}):
 
-| Metric | Warning Threshold | Critical Threshold |
-|--------|-------------------|-------------------|
-| **CPU Usage** | > 70% | > 85% |
-| **Memory Usage** | > 80% | > 90% |
-| **Disk Usage** | > 75% | > 85% |
-| **Connection Count** | > 80% of max | > 95% of max |
-| **Query Response Time** | > 1 second | > 5 seconds |
-| **Slow Queries** | > 10/hour | > 50/hour |
+| Metric                  | Warning Threshold | Critical Threshold |
+| ----------------------- | ----------------- | ------------------ |
+| **CPU Usage**           | > 70%             | > 85%              |
+| **Memory Usage**        | > 80%             | > 90%              |
+| **Disk Usage**          | > 75%             | > 85%              |
+| **Connection Count**    | > 80% of max      | > 95% of max       |
+| **Query Response Time** | > 1 second        | > 5 seconds        |
+| **Slow Queries**        | > 10/hour         | > 50/hour          |
 
 #### Query Performance
 
@@ -157,7 +157,7 @@ SET GLOBAL slow_query_log = 'ON';
 SET GLOBAL long_query_time = 2;
 
 -- Find slow queries
-SELECT 
+SELECT
     query_time,
     lock_time,
     rows_sent,
@@ -201,11 +201,11 @@ spec:
   parameters:
     resources:
       requests:
-        memory: "2Gi"
-        cpu: "1000m"
+        memory: '2Gi'
+        cpu: '1000m'
       limits:
-        memory: "4Gi"
-        cpu: "2000m"
+        memory: '4Gi'
+        cpu: '2000m'
 ```
 
 Apply the changes:
@@ -217,7 +217,7 @@ kubectl apply -f mysql-database.yaml -n ${{ values.namespace }}
 ### Storage Expansion
 
 !!! warning "Storage Expansion"
-    Storage expansion requires downtime. Plan maintenance windows accordingly.
+Storage expansion requires downtime. Plan maintenance windows accordingly.
 
 ```bash
 # Check current storage
@@ -238,13 +238,13 @@ kubectl get events -n ${{ values.namespace }} --field-selector involvedObject.ki
 
 ```sql
 -- Find expensive queries
-SELECT 
+SELECT
     DIGEST_TEXT as query,
     COUNT_STAR as exec_count,
     AVG_TIMER_WAIT/1000000000 as avg_exec_time_sec,
     SUM_TIMER_WAIT/1000000000 as total_exec_time_sec
-FROM performance_schema.events_statements_summary_by_digest 
-ORDER BY SUM_TIMER_WAIT DESC 
+FROM performance_schema.events_statements_summary_by_digest
+ORDER BY SUM_TIMER_WAIT DESC
 LIMIT 10;
 ```
 
@@ -275,11 +275,11 @@ kubectl exec -n ${{ values.namespace }} \
 kubectl exec -n ${{ values.namespace }} \
   $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
   mysql -u root -p$MYSQL_ROOT_PASSWORD -e "
-    SELECT 
+    SELECT
         table_schema as 'Database',
         table_name as 'Table',
         round(((data_length + index_length) / 1024 / 1024), 2) as 'Size MB'
-    FROM information_schema.tables 
+    FROM information_schema.tables
     WHERE table_schema = '${{ values.databaseName }}'
     ORDER BY (data_length + index_length) DESC;"
 ```
@@ -333,18 +333,20 @@ mysqldumpslow -s t -t 10 slow-queries-$(date +%Y%m%d).log
 ### Security Incident
 
 1. **Immediately rotate passwords**:
+
    ```bash
    # Generate new password
    NEW_PASSWORD=$(openssl rand -base64 32)
-   
+
    # Update in Vault
    vault kv put secret/${{ values.appName }} DB_PASSWORD="$NEW_PASSWORD"
    ```
 
 2. **Review access logs**:
+
    ```sql
    -- Check recent connections
-   SELECT * FROM mysql.general_log 
+   SELECT * FROM mysql.general_log
    WHERE event_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
    ORDER BY event_time DESC;
    ```

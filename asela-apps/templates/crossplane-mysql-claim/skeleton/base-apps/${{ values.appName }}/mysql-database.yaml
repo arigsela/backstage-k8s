@@ -43,7 +43,7 @@ metadata:
     cost-center.io/product: ${{ values.system | replace('system:default/', '') | replace('system:local/', '') }}
     cost-center.io/environment: ${{ values.environment }}
     finops.io/cost-allocation: database-services
-    
+
     # Backstage links - using terasky format
     terasky.backstage.io/links: |
       [

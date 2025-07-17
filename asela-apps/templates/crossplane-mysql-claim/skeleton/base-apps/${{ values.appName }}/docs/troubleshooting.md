@@ -67,6 +67,7 @@ kubectl run mysql-test --image=mysql:8.0 --rm -it --restart=Never -- \
 ### 1. Connection Problems
 
 #### Symptoms
+
 - Applications cannot connect to database
 - "Connection refused" errors
 - Timeout errors
@@ -91,36 +92,34 @@ kubectl describe service mysql -n ${{ values.namespace }}
 #### Solutions
 
 === "Pod Not Running"
-    ```bash
-    # Check pod status and events
-    kubectl describe pod -n ${{ values.namespace }} -l app=mysql
-    
+
+````bash # Check pod status and events
+kubectl describe pod -n ${{ values.namespace }} -l app=mysql
+
     # Check resource constraints
     kubectl top pod -n ${{ values.namespace }} -l app=mysql
-    
+
     # Restart if necessary
     kubectl delete pod -n ${{ values.namespace }} -l app=mysql
     ```
 
 === "Network Issues"
-    ```bash
-    # Check network policies
-    kubectl get networkpolicies -n ${{ values.namespace }}
-    
+```bash # Check network policies
+kubectl get networkpolicies -n ${{ values.namespace }}
+
     # Verify service selector
     kubectl get service mysql -n ${{ values.namespace }} -o yaml
-    
+
     # Check endpoints
     kubectl get endpoints mysql -n ${{ values.namespace }}
     ```
 
 === "Authentication Issues"
-    ```bash
-    # Verify credentials from secret
-    kubectl get secret ${{ values.appName }}-secret \
-      -n ${{ values.namespace }} \
-      -o jsonpath='{.data.DB_PASSWORD}' | base64 -d
-    
+```bash # Verify credentials from secret
+kubectl get secret ${{ values.appName }}-secret \
+ -n ${{ values.namespace }} \
+ -o jsonpath='{.data.DB_PASSWORD}' | base64 -d
+
     # Check if user exists in database
     kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
@@ -131,6 +130,7 @@ kubectl describe service mysql -n ${{ values.namespace }}
 ### 2. Performance Issues
 
 #### Symptoms
+
 - Slow query responses
 - High CPU usage
 - Memory pressure
@@ -145,13 +145,13 @@ SHOW STATUS LIKE 'Queries';
 SHOW STATUS LIKE 'Slow_queries';
 
 -- Find slow queries
-SELECT 
+SELECT
     DIGEST_TEXT,
     COUNT_STAR as executions,
     ROUND(AVG_TIMER_WAIT/1000000000, 2) as avg_seconds,
     ROUND(SUM_TIMER_WAIT/1000000000, 2) as total_seconds
-FROM performance_schema.events_statements_summary_by_digest 
-ORDER BY SUM_TIMER_WAIT DESC 
+FROM performance_schema.events_statements_summary_by_digest
+ORDER BY SUM_TIMER_WAIT DESC
 LIMIT 10;
 
 -- Check for blocking queries
@@ -159,39 +159,39 @@ SHOW PROCESSLIST;
 
 -- Check InnoDB status
 SHOW ENGINE INNODB STATUS\G
-```
+````
 
 #### Solutions
 
 === "High CPU Usage"
-    ```sql
-    -- Identify expensive queries
-    SELECT * FROM sys.statements_with_runtimes_in_95th_percentile;
-    
+
+````sql
+-- Identify expensive queries
+SELECT \* FROM sys.statements_with_runtimes_in_95th_percentile;
+
     -- Check for missing indexes
     SELECT * FROM sys.statements_with_full_table_scans;
-    
+
     -- Optimize problematic queries
     EXPLAIN FORMAT=JSON SELECT ...; -- Analyze execution plan
     ```
 
 === "Memory Issues"
-    ```bash
-    # Check pod memory usage
-    kubectl top pod -n ${{ values.namespace }} -l app=mysql
-    
+```bash # Check pod memory usage
+kubectl top pod -n ${{ values.namespace }} -l app=mysql
+
     # Increase memory limits if needed
     kubectl patch deployment mysql -n ${{ values.namespace }} -p '{"spec":{"template":{"spec":{"containers":[{"name":"mysql","resources":{"limits":{"memory":"4Gi"}}}]}}}}'
     ```
 
 === "Lock Contention"
-    ```sql
-    -- Check for deadlocks
-    SHOW ENGINE INNODB STATUS\G
-    
+```sql
+-- Check for deadlocks
+SHOW ENGINE INNODB STATUS\G
+
     -- Monitor current locks
     SELECT * FROM performance_schema.data_locks;
-    
+
     -- Check lock waits
     SELECT * FROM performance_schema.data_lock_waits;
     ```
@@ -199,6 +199,7 @@ SHOW ENGINE INNODB STATUS\G
 ### 3. Storage Issues
 
 #### Symptoms
+
 - "Disk full" errors
 - Database crashes
 - Cannot write to database
@@ -218,18 +219,18 @@ kubectl get pvc -n ${{ values.namespace }} -l app=mysql
 kubectl exec -n ${{ values.namespace }} \
   $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
   iostat -x 1 5
-```
+````
 
 #### Solutions
 
 === "Disk Full"
-    ```bash
-    # Clean up logs
-    kubectl exec -n ${{ values.namespace }} \
+
+````bash # Clean up logs
+kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
       mysql -u root -p$MYSQL_ROOT_PASSWORD \
-      -e "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY);"
-    
+ -e "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY);"
+
     # Remove old slow query logs
     kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
@@ -237,12 +238,11 @@ kubectl exec -n ${{ values.namespace }} \
     ```
 
 === "Expand Storage"
-    ```bash
-    # Increase PVC size (requires StorageClass with allowVolumeExpansion)
-    kubectl patch pvc mysql-data-${{ values.appName }}-0 \
-      -n ${{ values.namespace }} \
-      -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
-    
+```bash # Increase PVC size (requires StorageClass with allowVolumeExpansion)
+kubectl patch pvc mysql-data-${{ values.appName }}-0 \
+ -n ${{ values.namespace }} \
+ -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
+
     # Monitor expansion progress
     kubectl get events -n ${{ values.namespace }} \
       --field-selector involvedObject.kind=PersistentVolumeClaim
@@ -251,6 +251,7 @@ kubectl exec -n ${{ values.namespace }} \
 ### 4. Backup and Recovery Issues
 
 #### Symptoms
+
 - Backup jobs failing
 - Cannot restore from backup
 - Data corruption
@@ -268,18 +269,18 @@ kubectl logs -n ${{ values.namespace }} -l job-name=mysql-backup-$(date +%Y%m%d)
 kubectl exec -n ${{ values.namespace }} \
   $(kubectl get pods -n ${{ values.namespace }} -l app=mysql-backup -o jsonpath='{.items[0].metadata.name}') -- \
   ls -la /backups/
-```
+````
 
 #### Solutions
 
 === "Backup Failures"
-    ```bash
-    # Manual backup to test
-    kubectl exec -n ${{ values.namespace }} \
+
+````bash # Manual backup to test
+kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
       mysqldump -u root -p$MYSQL_ROOT_PASSWORD \
-      --single-transaction --routines --triggers ${{ values.databaseName }} > manual-backup.sql
-    
+ --single-transaction --routines --triggers ${{ values.databaseName }} > manual-backup.sql
+
     # Check backup storage permissions
     kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql-backup -o jsonpath='{.items[0].metadata.name}') -- \
@@ -287,13 +288,12 @@ kubectl exec -n ${{ values.namespace }} \
     ```
 
 === "Restore Issues"
-    ```bash
-    # Verify backup integrity
-    kubectl exec -n ${{ values.namespace }} \
+```bash # Verify backup integrity
+kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
       mysql -u root -p$MYSQL_ROOT_PASSWORD \
-      -e "source /backups/backup-file.sql" --verbose
-    
+ -e "source /backups/backup-file.sql" --verbose
+
     # Check for corruption
     kubectl exec -n ${{ values.namespace }} \
       $(kubectl get pods -n ${{ values.namespace }} -l app=mysql -o jsonpath='{.items[0].metadata.name}') -- \
@@ -303,6 +303,7 @@ kubectl exec -n ${{ values.namespace }} \
 ### 5. Security Issues
 
 #### Symptoms
+
 - Authentication failures
 - Permission denied errors
 - Suspicious access patterns
@@ -314,7 +315,7 @@ kubectl exec -n ${{ values.namespace }} \
 SHOW GRANTS FOR '${{ values.username }}'@'%';
 
 -- Review recent connections
-SELECT * FROM mysql.general_log 
+SELECT * FROM mysql.general_log
 WHERE event_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
 ORDER BY event_time DESC;
 
@@ -322,32 +323,32 @@ ORDER BY event_time DESC;
 SELECT * FROM performance_schema.events_statements_history
 WHERE EVENT_NAME = 'statement/sql/error'
 AND ERRORS > 0;
-```
+````
 
 #### Solutions
 
 === "Password Issues"
-    ```bash
-    # Rotate password
-    NEW_PASSWORD=$(openssl rand -base64 32)
-    
+
+````bash # Rotate password
+NEW_PASSWORD=$(openssl rand -base64 32)
+
     # Update in Vault
     vault kv put secret/${{ values.appName }} DB_PASSWORD="$NEW_PASSWORD"
-    
+
     # Verify External Secrets sync
     kubectl get externalsecret ${{ values.appName }}-secret \
       -n ${{ values.namespace }} -o yaml
     ```
 
 === "Permission Problems"
-    ```sql
-    -- Grant necessary permissions
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ${{ values.databaseName }}.* 
+```sql
+-- Grant necessary permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON ${{ values.databaseName }}.*
     TO '${{ values.username }}'@'%';
-    
+
     -- Reload privileges
     FLUSH PRIVILEGES;
-    
+
     -- Verify grants
     SHOW GRANTS FOR '${{ values.username }}'@'%';
     ```
@@ -356,23 +357,23 @@ AND ERRORS > 0;
 
 ### Common MySQL Error Codes
 
-| Error Code | Description | Common Cause | Solution |
-|------------|-------------|--------------|----------|
-| **1045** | Access denied | Wrong credentials | Check username/password |
-| **1146** | Table doesn't exist | Missing table | Create table or check name |
-| **1205** | Lock wait timeout | Deadlock/long transaction | Optimize queries, reduce transaction time |
-| **1213** | Deadlock found | Transaction conflict | Implement retry logic |
-| **2003** | Can't connect | Network/service issue | Check connectivity and service |
-| **2006** | MySQL server has gone away | Connection timeout | Check wait_timeout setting |
+| Error Code | Description                | Common Cause              | Solution                                  |
+| ---------- | -------------------------- | ------------------------- | ----------------------------------------- |
+| **1045**   | Access denied              | Wrong credentials         | Check username/password                   |
+| **1146**   | Table doesn't exist        | Missing table             | Create table or check name                |
+| **1205**   | Lock wait timeout          | Deadlock/long transaction | Optimize queries, reduce transaction time |
+| **1213**   | Deadlock found             | Transaction conflict      | Implement retry logic                     |
+| **2003**   | Can't connect              | Network/service issue     | Check connectivity and service            |
+| **2006**   | MySQL server has gone away | Connection timeout        | Check wait_timeout setting                |
 
 ### Kubernetes-Specific Errors
 
-| Error | Description | Solution |
-|-------|-------------|----------|
-| **CrashLoopBackOff** | Pod keeps restarting | Check pod logs, resource limits |
-| **ImagePullBackOff** | Cannot pull image | Check image name, registry access |
-| **Pending** | Pod cannot be scheduled | Check resource requests, node capacity |
-| **PVC Pending** | Storage not available | Check StorageClass, available storage |
+| Error                | Description             | Solution                               |
+| -------------------- | ----------------------- | -------------------------------------- |
+| **CrashLoopBackOff** | Pod keeps restarting    | Check pod logs, resource limits        |
+| **ImagePullBackOff** | Cannot pull image       | Check image name, registry access      |
+| **Pending**          | Pod cannot be scheduled | Check resource requests, node capacity |
+| **PVC Pending**      | Storage not available   | Check StorageClass, available storage  |
 
 ## Log Analysis
 
@@ -387,7 +388,7 @@ kubectl logs -n ${{ values.namespace }} -l app=mysql | grep -i error
 
 # Export logs for analysis
 kubectl logs -n ${{ values.namespace }} -l app=mysql --since=24h > mysql-logs-$(date +%Y%m%d).log
-```
+````
 
 ### Slow Query Log
 
@@ -420,23 +421,23 @@ Configure alerts for these critical metrics:
 ```yaml
 # Example Prometheus alert rules
 groups:
-- name: mysql-${{ values.appName }}
-  rules:
-  - alert: MySQLDown
-    expr: up{job="mysql-${{ values.appName }}"} == 0
-    for: 1m
-    labels:
-      severity: critical
-    annotations:
-      summary: "MySQL database is down"
-      
-  - alert: MySQLSlowQueries
-    expr: rate(mysql_global_status_slow_queries{instance="mysql-${{ values.appName }}"}[5m]) > 10
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: "High number of slow queries detected"
+  - name: mysql-${{ values.appName }}
+    rules:
+      - alert: MySQLDown
+        expr: up{job="mysql-${{ values.appName }}"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'MySQL database is down'
+
+      - alert: MySQLSlowQueries
+        expr: rate(mysql_global_status_slow_queries{instance="mysql-${{ values.appName }}"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High number of slow queries detected'
 ```
 
 ## Getting Help
