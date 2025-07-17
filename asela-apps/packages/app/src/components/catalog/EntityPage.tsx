@@ -151,11 +151,11 @@ const overviewContent = (
     <Grid item md={8} xs={12}>
       <EntityHasSubcomponentsCard variant="gridItem" />
     </Grid>
-    <IfCrossplaneOverviewAvailable>
+    {/* <IfCrossplaneOverviewAvailable>
       <Grid item md={6}>
         <CrossplaneOverviewCardSelector />
       </Grid>
-    </IfCrossplaneOverviewAvailable>
+    </IfCrossplaneOverviewAvailable> */}
     <EntitySwitch>
       <EntitySwitch.Case if={isGithubActionsAvailable}>
         <Grid item sm={6}>
@@ -184,7 +184,7 @@ const serviceEntityPage = (
       <EntityKubernetesContent />
     </EntityLayout.Route>
 
-    <EntityLayout.Route
+    {/* <EntityLayout.Route
       path="/crossplane-resources"
       title="Crossplane Resources"
     >
@@ -197,7 +197,7 @@ const serviceEntityPage = (
       <IfCrossplaneResourceGraphAvailable>
         <CrossplaneResourceGraphSelector />
       </IfCrossplaneResourceGraphAvailable>
-    </EntityLayout.Route>
+    </EntityLayout.Route> */}
 
     <EntityLayout.Route path="/api" title="API">
       <Grid container spacing={3} alignItems="stretch">
@@ -440,11 +440,11 @@ const crossplaneOverviewContent = (
     <Grid item md={6}>
       <EntityAboutCard variant="gridItem" />
     </Grid>
-    <IfCrossplaneOverviewAvailable>
+    {/* <IfCrossplaneOverviewAvailable>
       <Grid item md={6}>
         <CrossplaneOverviewCardSelector />
       </Grid>
-    </IfCrossplaneOverviewAvailable>
+    </IfCrossplaneOverviewAvailable> */}
     <Grid item md={4} xs={12}>
       <EntityLinksCard />
     </Grid>
@@ -464,7 +464,7 @@ const CrossplaneEntityPage = () => {
         {crossplaneOverviewContent}
       </EntityLayout.Route>
 
-      <EntityLayout.Route
+      {/* <EntityLayout.Route
         if={isResourcesListAvailable}
         path="/crossplane-resources"
         title="Crossplane Resources"
@@ -482,7 +482,7 @@ const CrossplaneEntityPage = () => {
         <IfCrossplaneResourceGraphAvailable>
           <CrossplaneResourceGraphSelector />
         </IfCrossplaneResourceGraphAvailable>
-      </EntityLayout.Route>
+      </EntityLayout.Route> */}
 
       <EntityLayout.Route
         path="/kubernetes"

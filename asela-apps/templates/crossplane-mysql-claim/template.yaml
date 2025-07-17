@@ -100,6 +100,7 @@ spec:
           ui:options:
             catalogFilter:
               kind: System
+              'metadata.namespace': default
             defaultKind: System
 
         environment:
@@ -141,6 +142,36 @@ spec:
             allowedRepos:
               - kubernetes
 
+    - title: External Services Configuration (Optional)
+      properties:
+        vaultUrl:
+          title: Vault URL
+          type: string
+          description: Base URL for Vault UI (defaults to https://vault.example.com)
+          default: https://vault.example.com
+          ui:help: 'Used for direct links to secrets in Vault'
+
+        grafanaUrl:
+          title: Grafana URL
+          type: string
+          description: Base URL for Grafana dashboards
+          default: https://grafana.example.com
+          ui:help: 'Used for monitoring dashboard links'
+
+        phpMyAdminUrl:
+          title: phpMyAdmin URL
+          type: string
+          description: Base URL for phpMyAdmin
+          default: https://phpmyadmin.example.com
+          ui:help: 'Database administration UI'
+
+        slackChannel:
+          title: Slack Support Channel ID
+          type: string
+          description: Slack channel ID for support (e.g., C1234567890)
+          default: C1234567890
+          ui:help: 'Find this in Slack channel details'
+
   # These are the steps that are executed in the scaffolder backend
   steps:
     - id: fetch-base
@@ -158,6 +189,10 @@ spec:
           system: ${{ parameters.system }}
           environment: ${{ parameters.environment }}
           description: ${{ parameters.description }}
+          vaultUrl: ${{ parameters.vaultUrl or 'https://vault.example.com' }}
+          grafanaUrl: ${{ parameters.grafanaUrl or 'https://grafana.example.com' }}
+          phpMyAdminUrl: ${{ parameters.phpMyAdminUrl or 'https://phpmyadmin.example.com' }}
+          slackChannel: ${{ parameters.slackChannel or 'C1234567890' }}
           timestamp: ${{ Date.now() }}
           backstageUrl: ${{ env.BACKSTAGE_URL | default('https://backstage.io') }}
 
