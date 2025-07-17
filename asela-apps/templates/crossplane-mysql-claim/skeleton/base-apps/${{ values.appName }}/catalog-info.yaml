@@ -6,6 +6,7 @@ metadata:
   annotations:
     backstage.io/kubernetes-id: ${{ values.appName }}
     backstage.io/kubernetes-namespace: ${{ values.namespace }}
+    backstage.io/techdocs-ref: dir:.
   links:
     # Vault Secret Management
     - url: ${{ values.vaultUrl }}/ui/vault/secrets/secret/show/${{ values.appName }}/DB_PASSWORD
