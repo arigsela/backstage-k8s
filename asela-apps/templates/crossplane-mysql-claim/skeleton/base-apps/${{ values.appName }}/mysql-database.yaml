@@ -19,9 +19,60 @@ metadata:
     terasky.backstage.io/component-type: resource
     terasky.backstage.io/description: ${{ values.description | default('MySQL database for ' + values.appName + ' application') }}
     terasky.backstage.io/lifecycle: ${{ values.environment }}
-    terasky.backstage.io/owner: ${{ values.owner }}
-    terasky.backstage.io/system: ${{ values.system }}
+    terasky.backstage.io/owner: ${{ values.owner | replace('group:default/', '') | replace('user:default/', '') }}
+    terasky.backstage.io/system: ${{ values.system | replace('system:default/', '') | replace('system:local/', '') }}
     terasky.backstage.io/tags: database,mysql,crossplane,infrastructure
+
+    # External resource links
+    backstage.io/view-url: https://k8s-dashboard.example.com/#!/overview?namespace=${{ values.namespace }}&kind=MySQLDatabase&name=${{ values.appName }}
+    backstage.io/edit-url: https://github.com/arigsela/kubernetes/edit/main/base-apps/${{ values.appName }}/mysql-database.yaml
+
+    # Monitoring annotations
+    grafana/dashboard-url: https://grafana.example.com/d/mysql-overview/mysql-database?var-database=${{ values.databaseName }}
+    grafana/alert-label-selector: 'database=${{ values.databaseName }}'
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '9104'
+    prometheus.io/path: '/metrics'
+
+    # Vault integration
+    vault.io/secret-path: secret/data/${{ values.appName }}
+    vault.io/role: ${{ values.appName }}-db-reader
+
+    # Cost tracking
+    cost-center.io/team: ${{ values.owner | replace('group:default/', '') | replace('user:default/', '') }}
+    cost-center.io/product: ${{ values.system | replace('system:default/', '') | replace('system:local/', '') }}
+    cost-center.io/environment: ${{ values.environment }}
+    finops.io/cost-allocation: database-services
+    
+    # Backstage links - using terasky format
+    terasky.backstage.io/links: |
+      [
+        {
+          "url": "${{ values.vaultUrl }}/ui/vault/secrets/secret/show/${{ values.appName }}/DB_PASSWORD",
+          "title": "Database Password (Vault)",
+          "icon": "key"
+        },
+        {
+          "url": "${{ values.grafanaUrl }}/d/mysql-overview/mysql-database-overview?var-database=${{ values.databaseName }}&var-namespace=${{ values.namespace }}",
+          "title": "Grafana Dashboard",
+          "icon": "dashboard"
+        },
+        {
+          "url": "${{ values.phpMyAdminUrl }}/index.php?db=${{ values.databaseName }}&server=${{ values.namespace }}-mysql",
+          "title": "phpMyAdmin",
+          "icon": "database"
+        },
+        {
+          "url": "https://argocd.example.com/applications/${{ values.namespace }}/${{ values.appName }}",
+          "title": "ArgoCD Application",
+          "icon": "docs"
+        },
+        {
+          "url": "https://slack.com/app_redirect?channel=${{ values.slackChannel }}",
+          "title": "Support Channel",
+          "icon": "chat"
+        }
+      ]
 spec:
   compositionRef:
     name: xmysqldatabase.platform.io
